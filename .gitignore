@@ -1,0 +1,26 @@
+# ---- Python / Flask ----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+instance/
+venv/
+.venv/
+.env
+
+# ---- Node / Svelte ----
+node_modules/
+.svelte-kit/
+build/
+dist/
+
+# ---- VS Code / OS ----
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---- Log / Cache ----
+*.log
+.cache/
