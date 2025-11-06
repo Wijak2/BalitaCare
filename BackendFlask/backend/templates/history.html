@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Riwayat Pengukuran Anak {{ id_anak }}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light p-5">
+  <div class="container">
+    <div class="card shadow p-4 mx-auto" style="max-width: 700px;">
+      <h4 class="mb-3 text-center">📜 Riwayat Pengukuran Anak #{{ id_anak }}</h4>
+
+      {% if data and data|length > 0 %}
+        <table class="table table-bordered">
+          <thead>
+            <tr class="table-primary text-center">
+              <th>ID Pengukuran</th>
+              <th>Lingkar Kepala</th>
+              <th>Lingkar Lengan</th>
+              <th>Tanggal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in data %}
+              <tr>
+                <td class="text-center">{{ item.id_pengukuran }}</td>
+                <td>{{ item.lingkar_kepala or '-' }}</td>
+                <td>{{ item.lingkar_lengan or '-' }}</td>
+                <td>{{ item.created_at.strftime('%Y-%m-%d %H:%M:%S') if item.created_at else '-' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="text-center text-muted">Belum ada data pengukuran untuk anak ini.</p>
+      {% endif %}
+
+      <a href="{{ url_for('auth.dashboard_orangtua') }}" class="btn btn-primary">⬅️ Kembali ke Dashboard Orang Tua</a>
+    </div>
+  </div>
+</body>
+</html>

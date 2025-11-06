@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard Orang Tua</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-5">
+
+<h3>👪 Dashboard Orang Tua</h3>
+<a href="{{ url_for('auth.logout') }}" class="btn btn-danger mb-3">Logout</a>
+
+<div class="card p-3 shadow">
+  <h5>Anak Anda:</h5>
+  <ul class="list-group">
+    {% for anak in anak_list %}
+      <li class="list-group-item">
+        {{ anak.nama }} ({{ anak.jenis_kelamin or '-' }})
+        <a href="{{ url_for('iot.history_anak', id_anak=anak.id_anak) }}" class="btn btn-sm btn-info float-end">Riwayat</a>
+        <a href="{{ url_for('iot.detail_pengukuran', id_anak=anak.id_anak) }}" class="btn btn-sm btn-success float-end me-2">Detail</a>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+
+</body>
+</html>

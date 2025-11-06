@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Grafik Pertumbuhan {{ anak.nama }}</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+
+<body class="bg-light">
+<div class="container py-5">
+  <div class="card shadow p-4">
+    <h4 class="mb-4">📈 Grafik Pertumbuhan {{ anak.nama }}</h4>
+    <canvas id="growthChart" height="120"></canvas>
+
+    <div class="mt-4 text-center">
+      <a href="{{ url_for('iot.history_anak', id_anak=anak.id_anak) }}" class="btn btn-secondary">
+        ⬅ Kembali
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const ctx = document.getElementById('growthChart').getContext('2d');
+
+  const data = {
+    datasets: [
+      {
+        label: 'Tinggi Badan (cm)',
+        data: {{ tinggi_points|tojson|safe }},
+        borderColor: 'blue',
+        backgroundColor: 'rgba(0, 0, 255, 0.2)',
+        tension: 0.3,
+        fill: false
+      },
+      {
+        label: 'Berat Badan (kg)',
+        data: {{ berat_points|tojson|safe }},
+        borderColor: 'red',
+        backgroundColor: 'rgba(255, 0, 0, 0.2)',
+        tension: 0.3,
+        fill: false
+      },
+      {
+        label: 'Lingkar Kepala (cm)',
+        data: {{ kepala_points|tojson|safe }},
+        borderColor: 'green',
+        borderDash: [5, 5],
+        backgroundColor: 'rgba(0, 255, 0, 0.2)',
+        tension: 0.3,
+        fill: false
+      },
+      {
+        label: 'Lingkar Lengan (cm)',
+        data: {{ lengan_points|tojson|safe }},
+        borderColor: 'orange',
+        borderDash: [10, 5],
+        backgroundColor: 'rgba(255, 165, 0, 0.2)',
+        tension: 0.3,
+        fill: false
+      }
+    ]
+  };
+
+  new Chart(ctx, {
+    type: 'line',
+    data: data,
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        title: {
+          display: true,
+          text: 'Grafik Perkembangan Anak Berdasarkan Waktu'
+        },
+        legend: {
+          position: 'top'
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: {
+            unit: 'day',
+            tooltipFormat: 'dd LLL yyyy'
+          },
+          title: {
+            display: true,
+            text: 'Tanggal Pengukuran'
+          }
+        },
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Nilai Pengukuran'
+          }
+        }
+      }
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Daftar Anak</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-5">
+  <div class="container">
+    <h3 class="mb-4">👶 Daftar Anak</h3>
+    <a href="{{ url_for('iot.add_anak') }}" class="btn btn-primary mb-3">+ Tambah Anak</a>
+
+    <table class="table table-bordered table-striped align-middle">
+      <thead class="table-primary text-center">
+        <tr>
+          <th>ID</th>
+          <th>Nama Anak</th>
+          <th>Jenis Kelamin</th>
+          <th>Tanggal Lahir</th>
+          <th>Orang Tua</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in anak_list %}
+        <tr>
+          <td class="text-center">{{ a.id_anak }}</td>
+          <td>{{ a.nama }}</td>
+          <td class="text-center">
+            {% if a.jenis_kelamin == 'L' or a.jenis_kelamin == 'Laki-laki' %}
+              Laki-laki
+            {% elif a.jenis_kelamin == 'P' or a.jenis_kelamin == 'Perempuan' %}
+              Perempuan
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td class="text-center">{{ a.tanggal_lahir or '-' }}</td>
+          <td>{{ a.orang_tua.nama if a.orang_tua else '-' }}</td>
+          <td class="text-center">
+            <a href="{{ url_for('iot.edit_anak', id_anak=a.id_anak) }}" class="btn btn-sm btn-warning">Edit</a>
+            <form action="{{ url_for('iot.delete_anak', id_anak=a.id_anak) }}" method="POST" style="display:inline;">
+              <button class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin hapus?')">Hapus</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

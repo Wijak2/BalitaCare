@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Form Pengukuran - Langkah 1</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-5">
+  <div class="container">
+    <div class="card shadow p-4 mx-auto" style="max-width: 600px;">
+      <h4 class="text-center mb-4">🩺 Langkah 1: Pilih Anak</h4>
+
+      {% if error %}
+        <div class="alert alert-danger text-center">{{ error }}</div>
+      {% endif %}
+
+      <form id="form-step1" action="{{ url_for('iot.form_step2') }}" method="POST">
+        <!-- Pilih Anak -->
+        <div class="mb-3">
+          <label class="form-label">Pilih Anak</label>
+          <select id="id_anak" name="id_anak" class="form-select" required onchange="loadPengukuran()">
+            <option value="" disabled {% if not selected_id %}selected{% endif %}>-- pilih anak --</option>
+            {% for anak in anak_list %}
+              <option value="{{ anak.id_anak }}" {% if selected_id and selected_id == anak.id_anak|string %}selected{% endif %}>
+                {{ anak.nama }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Pilih ID Pengukuran -->
+        <div class="mb-3">
+          <label class="form-label">ID Pengukuran</label>
+          <div class="input-group">
+            <select id="id_pengukuran" name="id_pengukuran" class="form-select" required>
+              <option value="" disabled selected>-- pilih anak dulu --</option>
+            </select>
+            <button type="button" class="btn btn-outline-primary" onclick="buatBaru()">➕ Buat Baru</button>
+          </div>
+        </div>
+
+        <div class="text-center mt-4">
+          <button type="submit" class="btn btn-primary w-100">Selanjutnya ➡️</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // 🔹 Ambil daftar pengukuran berdasarkan anak yang dipilih
+    async function loadPengukuran() {
+      const idAnak = document.getElementById("id_anak").value;
+      const select = document.getElementById("id_pengukuran");
+      if (!idAnak) return;
+
+      select.innerHTML = `<option value="" disabled selected>Memuat data...</option>`;
+      try {
+        const res = await fetch(`/iot/api/pengukuran-by-anak/${idAnak}`);
+        const data = await res.json();
+
+        if (data.length === 0) {
+          select.innerHTML = `<option value="" disabled selected>Tidak ada pengukuran</option>`;
+        } else {
+          select.innerHTML = "";
+          data.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.id_pengukuran;
+            opt.textContent = `ID ${p.id_pengukuran} - ${p.tanggal}`;
+            select.appendChild(opt);
+          });
+        }
+      } catch {
+        select.innerHTML = `<option value="" disabled selected>Gagal memuat data</option>`;
+      }
+    }
+
+    // 🔹 Buat baris pengukuran baru langsung di DB
+    async function buatBaru() {
+      const idAnak = document.getElementById("id_anak").value;
+      if (!idAnak) {
+        alert("⚠️ Pilih anak terlebih dahulu!");
+        return;
+      }
+
+      try {
+        const res = await fetch("/iot/api/create-pengukuran", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id_anak: idAnak })
+        });
+        const data = await res.json();
+
+        if (data.id_pengukuran) {
+          alert(`✅ ID Pengukuran baru dibuat: ${data.id_pengukuran}`);
+          const select = document.getElementById("id_pengukuran");
+          select.innerHTML = "";
+          const opt = document.createElement("option");
+          opt.value = data.id_pengukuran;
+          opt.textContent = `ID Baru: ${data.id_pengukuran}`;
+          opt.selected = true;
+          select.appendChild(opt);
+        } else {
+          alert("❌ Gagal membuat ID baru. " + (data.error || ""));
+        }
+      } catch (err) {
+        alert("❌ Gagal terhubung ke server.");
+      }
+    }
+
+    // 🔹 Muat otomatis jika anak sudah dipilih sebelumnya
+    window.addEventListener("DOMContentLoaded", () => {
+      const idAnak = document.getElementById("id_anak").value;
+      if (idAnak) loadPengukuran();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Form Pengukuran - Langkah 2</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .nav-btns button { margin-right: 5px; }
+    .iot-box {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body class="bg-light p-5">
+  <div class="container">
+    <div class="card shadow p-4 mx-auto" style="max-width: 700px;">
+      <h4 class="text-center mb-3">📏 Langkah 2: Pengukuran Anak</h4>
+
+      <!-- Navigasi antar pengukuran -->
+      <div class="text-center mb-4 nav-btns">
+        <button class="btn btn-outline-primary" onclick="showForm('kepala')">Lingkar Kepala</button>
+        <button class="btn btn-outline-primary" onclick="showForm('lengan')">Lingkar Lengan</button>
+        <button class="btn btn-outline-primary" onclick="showForm('bbtb')">BB & TB</button>
+      </div>
+
+      {% if success %}
+      <div class="alert alert-success text-center">{{ success }}</div>
+      {% elif error %}
+      <div class="alert alert-danger text-center">{{ error }}</div>
+      {% endif %}
+
+      <form action="{{ url_for('iot.save_current') }}" method="POST">
+        <input type="hidden" name="id_anak" value="{{ id_anak }}">
+        <input type="hidden" name="id_pengukuran" value="{{ id_pengukuran }}">
+        <!-- ✅ hanya satu input jenis global -->
+        <input type="hidden" id="jenis" name="jenis" value="kepala">
+
+        <!-- Form Lingkar Kepala -->
+        <div id="form-kepala" class="pengukuran">
+          <h5 class="mb-3">📡 Pengukuran Lingkar Kepala (IoT)</h5>
+          <div class="iot-box mb-3" id="kepala-data">
+            Menunggu data IoT...
+          </div>
+          <input type="hidden" name="lingkar_kepala" id="lingkar_kepala" value="{{ peng.lingkar_kepala if peng else '' }}">
+          {% if peng and peng.lingkar_kepala %}
+            <div class="alert alert-info text-center">
+              Data tersimpan di DB: <b>{{ peng.lingkar_kepala }} cm</b>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Form Lingkar Lengan -->
+        <div id="form-lengan" class="pengukuran d-none">
+          <h5 class="mb-3">📡 Pengukuran Lingkar Lengan (IoT)</h5>
+          <div class="iot-box mb-3" id="lengan-data">
+            Menunggu data IoT...
+          </div>
+          <input type="hidden" name="lingkar_lengan" id="lingkar_lengan" value="{{ peng.lingkar_lengan if peng else '' }}">
+          {% if peng and peng.lingkar_lengan %}
+            <div class="alert alert-info text-center">
+              Data tersimpan di DB: <b>{{ peng.lingkar_lengan }} cm</b>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Form Berat & Tinggi -->
+        <div id="form-bbtb" class="pengukuran d-none">
+          <h5 class="mb-3">⚖️ Pengukuran Manual</h5>
+          <label class="form-label">Berat Badan (kg)</label>
+          <input type="number" step="0.1" class="form-control mb-3" name="berat_badan"
+                 value="{{ peng.berat_badan if peng else '' }}" placeholder="Masukkan berat badan anak">
+
+          <label class="form-label">Tinggi Badan (cm)</label>
+          <input type="number" step="0.1" class="form-control" name="tinggi_badan"
+                 value="{{ peng.tinggi_badan if peng else '' }}" placeholder="Masukkan tinggi badan anak">
+        </div>
+
+        <div class="text-center mt-4">
+          <button type="submit" class="btn btn-success w-100">💾 Simpan Pengukuran</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function showForm(form) {
+      document.querySelectorAll('.pengukuran').forEach(el => el.classList.add('d-none'));
+      document.getElementById('form-' + form).classList.remove('d-none');
+      // ✅ perbarui jenis saat navigasi antar form
+      document.getElementById('jenis').value = form;
+    }
+
+    // Ambil data IoT periodik
+    async function fetchIoT() {
+      try {
+        const res = await fetch("/iot/latest-json");
+        const data = await res.json();
+
+        if (data && data.nilai) {
+          document.getElementById("kepala-data").innerText = JSON.stringify(data, null, 2);
+          document.getElementById("lengan-data").innerText = JSON.stringify(data, null, 2);
+
+          document.getElementById("lingkar_kepala").value = data.nilai;
+          document.getElementById("lingkar_lengan").value = data.nilai;
+        }
+      } catch {
+        document.getElementById("kepala-data").innerText = "⚠️ Gagal ambil data IoT";
+        document.getElementById("lengan-data").innerText = "⚠️ Gagal ambil data IoT";
+      }
+    }
+
+    setInterval(fetchIoT, 2000);
+    fetchIoT();
+  </script>
+</body>
+</html>

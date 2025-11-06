@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow-sm p-4 mx-auto" style="max-width: 500px;">
+  <h5 class="mb-3">{{ 'Tambah Anak' if action == 'add' else 'Edit Anak' }}</h5>
+  <form method="POST">
+    <div class="mb-3">
+      <label class="form-label">Nama Anak</label>
+      <input name="nama" type="text" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">ID Orang Tua</label>
+      <input name="id_orang_tua" type="number" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Tanggal Lahir</label>
+      <input name="tanggal_lahir" type="date" class="form-control">
+    </div>
+    <button class="btn btn-primary w-100">Simpan</button>
+  </form>
+</div>
+{% endblock %}

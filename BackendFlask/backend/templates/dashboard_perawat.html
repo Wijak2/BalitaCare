@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Perawat</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-5">
+
+  <!-- HEADER -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>🏥 Dashboard Perawat</h3>
+    <div>
+      <a href="{{ url_for('iot.list_anak') }}" class="btn btn-info me-2">👶 Kelola Data Anak</a>
+      <a href="{{ url_for('auth.list_orangtua') }}" class="btn btn-secondary me-2">🧍‍♂️ Kelola Data Orang Tua</a>
+      <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">Logout</a>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- DAFTAR ORANG TUA -->
+    <div class="col-md-6">
+      <div class="card p-3 shadow mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5>🧍‍♂️ Daftar Orang Tua</h5>
+          <a href="{{ url_for('auth.add_orangtua') }}" class="btn btn-sm btn-outline-primary">➕ Tambah Orang Tua</a>
+        </div>
+
+        <ul class="list-group">
+          {% for ot in orangtua_list %}
+            <li class="list-group-item">
+              <b>{{ ot.nama }}</b> - {{ ot.email }}
+              <div class="mt-2">
+                <a href="{{ url_for('iot.add_anak_by_orangtua', id_orang_tua=ot.id_orang_tua) }}" class="btn btn-sm btn-success">Tambah Anak</a>
+              </div>
+            </li>
+          {% else %}
+            <li class="list-group-item text-center text-muted">Belum ada data orang tua</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- DAFTAR ANAK -->
+    <div class="col-md-6">
+      <div class="card p-3 shadow">
+        <h5>👶 Daftar Anak</h5>
+        <ul class="list-group">
+          {% for anak in anak_list %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <b>{{ anak.nama }}</b>
+                {% if anak.orang_tua %}
+                  <small class="text-muted">({{ anak.orang_tua.nama }})</small>
+                {% endif %}
+              </div>
+              <div>
+                <a href="{{ url_for('iot.detail_pengukuran', id_anak=anak.id_anak) }}" class="btn btn-success btn-sm me-2">Detail</a>
+                <a href="{{ url_for('iot.form_step1', id_anak=anak.id_anak) }}" class="btn btn-primary btn-sm">Form Pengukuran</a>
+              </div>
+            </li>
+          {% else %}
+            <li class="list-group-item text-center text-muted">Belum ada data anak</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

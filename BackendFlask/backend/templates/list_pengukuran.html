@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Daftar Pengukuran</title>
+</head>
+<body>
+  <h2>Hasil Pengukuran Balita</h2>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>ID Anak</th>
+        <th>ID Perawat</th>
+        <th>Tanggal</th>
+        <th>Lingkar Kepala</th>
+        <th>Lingkar Lengan</th>
+        <th>Tinggi Badan</th>
+        <th>Berat Badan</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in data %}
+      <tr>
+        <td>{{ row.id_pengukuran }}</td>
+        <td>{{ row.id_anak }}</td>
+        <td>{{ row.id_perawat }}</td>
+        <td>{{ row.tanggal }}</td>
+        <td>{{ row.lingkar_kepala }}</td>
+        <td>{{ row.lingkar_lengan }}</td>
+        <td>{{ row.tinggi_badan }}</td>
+        <td>{{ row.berat_badan }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <br>
+  <a href="{{ url_for('iot.form_page') }}">Tambah Pengukuran Baru</a>
+</body>
+</html>
