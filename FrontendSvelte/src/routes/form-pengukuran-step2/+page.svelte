@@ -118,6 +118,34 @@
 		}
 	}
 
+	async function processAnalisis() {
+	if (!idPengukuran) {
+		showNotification('❌ ID pengukuran tidak ditemukan', 'error');
+		return;
+	}
+
+	try {
+		const res = await fetch(`http://127.0.0.1:5000/iot/api/process/${idPengukuran}`, {
+			method: 'POST'
+		});
+		const data = await res.json();
+
+		if (!res.ok) {
+			showNotification(`❌ ${data.error || 'Gagal memproses analisis'}`, 'error');
+			return;
+		}
+
+		showNotification('✅ Analisis berhasil diproses', 'success');
+
+		console.log('Hasil analisis:', data);
+
+	} catch (err) {
+		console.error(err);
+		showNotification('❌ Terjadi kesalahan saat memproses analisis', 'error');
+	}
+}
+
+
 	function showForm(form: string) {
 		activeForm = form;
 	}
@@ -125,7 +153,7 @@
 
 {#if $notification.message}
 	<div
-		class="fixed top-1/2 left-1/2 z-50
+		class="fixed left-1/2 top-1/2 z-50
 		-translate-x-1/2 -translate-y-1/2
 		rounded-lg px-6 py-3 text-white shadow-lg transition-all duration-300"
 		class:bg-green-500={$notification.type === 'success'}
@@ -136,93 +164,108 @@
 {/if}
 
 <div class="">
-	<div class="page-wrapper flex justify-center items-center">
-		<div class="flex w-full max-w-200 flex-col rounded-xl p-8 shadow-md bg-white">
+	<div class="page-wrapper flex items-center justify-center">
+		<div class="max-w-200 flex w-full flex-col rounded-xl bg-white p-8 shadow-md">
 			<h2 class="mb-4">📏 Langkah 2: Pengukuran Anak</h2>
 			<p class="mb-8">Nama Anak: <b>{anakNama}</b></p>
-	
+
 			<div class="mb-8 flex gap-2">
 				<button
-					class="flex-1 cursor-pointer rounded-4xl bg-sky-500 py-2.5 text-white transition hover:bg-sky-600"
+					class="rounded-4xl flex-1 cursor-pointer bg-sky-500 py-2.5 text-white transition hover:bg-sky-600"
 					class:bg-sky-700={activeForm === 'kepala'}
 					on:click={() => showForm('kepala')}
 				>
 					Lingkar Kepala
 				</button>
-	
+
 				<button
-					class="flex-1 cursor-pointer rounded-4xl bg-sky-500 py-2.5 text-white transition hover:bg-sky-600"
+					class="rounded-4xl flex-1 cursor-pointer bg-sky-500 py-2.5 text-white transition hover:bg-sky-600"
 					class:bg-sky-700={activeForm === 'lengan'}
 					on:click={() => showForm('lengan')}
 				>
 					Lingkar Lengan
 				</button>
-	
+
 				<button
-					class="flex-1 cursor-pointer rounded-4xl bg-sky-500 py-2.5 text-white transition hover:bg-sky-600"
+					class="rounded-4xl flex-1 cursor-pointer bg-sky-500 py-2.5 text-white transition hover:bg-sky-600"
 					class:bg-sky-700={activeForm === 'bbtb'}
 					on:click={() => showForm('bbtb')}
 				>
 					BB & TB
 				</button>
 			</div>
-	
+
 			{#if activeForm === 'kepala'}
 				<div>
 					<h5>Pengukuran Lingkar Kepala</h5>
-					<div class="p-6 bg-gray-300 rounded-xl mb-4 text-center h-40 flex items-center justify-center">
+					<div
+						class="mb-4 flex h-40 items-center justify-center rounded-xl bg-gray-300 p-6 text-center"
+					>
 						{#if iotKepala !== null}
 							Data IoT: <b>{iotKepala} cm</b>
 						{:else}
 							Menunggu data IoT...
 						{/if}
 					</div>
-					<p class="text-[0.85em] text-gray-500">Data ini akan tersimpan di DB saat klik tombol Simpan.</p>
+					<p class="text-[0.85em] text-gray-500">
+						Data ini akan tersimpan di DB saat klik tombol Simpan.
+					</p>
 				</div>
 			{/if}
-	
+
 			{#if activeForm === 'lengan'}
 				<div>
 					<h5>Pengukuran Lingkar Lengan</h5>
-					<div class="p-6 bg-gray-300 rounded-xl mb-4 text-center h-40 flex items-center justify-center">
+					<div
+						class="mb-4 flex h-40 items-center justify-center rounded-xl bg-gray-300 p-6 text-center"
+					>
 						{#if iotLengan !== null}
 							Data IoT: <b>{iotLengan} cm</b>
 						{:else}
 							Menunggu data IoT...
 						{/if}
 					</div>
-					<p class="text-[0.85em] text-gray-500">Data ini akan tersimpan di DB saat klik tombol Simpan.</p>
+					<p class="text-[0.85em] text-gray-500">
+						Data ini akan tersimpan di DB saat klik tombol Simpan.
+					</p>
 				</div>
 			{/if}
-	
+
 			{#if activeForm === 'bbtb'}
 				<div class="flex flex-col gap-3 pb-4">
 					<h5>Pengukuran Manual</h5>
-	
+
 					<label>Berat Badan (kg)</label>
 					<input
 						type="number"
 						bind:value={beratBadan}
 						placeholder="Masukkan berat badan anak"
-						class="w-full rounded-4xl border border-gray-300 p-4 outline-none focus:ring-2 focus:ring-sky-400"
+						class="rounded-4xl w-full border border-gray-300 p-4 outline-none focus:ring-2 focus:ring-sky-400"
 					/>
-	
+
 					<label>Tinggi Badan (cm)</label>
 					<input
 						type="number"
 						bind:value={tinggiBadan}
 						placeholder="Masukkan tinggi badan anak"
-						class="w-full rounded-4xl border border-gray-300 p-4 outline-none focus:ring-2 focus:ring-sky-400"
+						class="rounded-4xl w-full border border-gray-300 p-4 outline-none focus:ring-2 focus:ring-sky-400"
 					/>
 				</div>
 			{/if}
-	
-			<div class="flex flex-col gap-3 mt-auto">
+
+			<div class="mt-auto flex flex-col gap-3">
 				<button
 					class="btn-A w-full bg-green-500 text-white transition hover:bg-green-600"
 					on:click={saveData}>💾 Simpan Pengukuran</button
 				>
-	
+
+				<button
+					class="btn-A w-full bg-purple-600 text-white transition hover:bg-purple-700"
+					on:click={processAnalisis}
+				>
+					⚙️ Proses Analisis Gizi
+				</button>
+
 				<button
 					on:click={() => goto(`/detail-pengukuran?id=${idAnak}&role=perawat`)}
 					class="btn-A w-full bg-sky-500 text-white transition hover:bg-sky-600"

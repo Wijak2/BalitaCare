@@ -17,8 +17,8 @@
 		created_at: '-'
 	};
 
-	let hasil = {};
-	let ai_analysis = '';
+	let hasil: Record<string, any> = {};
+	let ai_analysis: any = {}; // 🔥 Diubah dari string ke object
 	let loading = true;
 	let role = '';
 	let id_anak = '';
@@ -67,7 +67,10 @@
 			};
 
 			hasil = data?.hasil ?? {};
-			ai_analysis = data?.ai_analysis ?? '';
+			
+			// 🔥 PERUBAHAN: ai_analysis sekarang object, bukan string
+			ai_analysis = data?.ai_analysis ?? {};
+			
 		} catch (err) {
 			console.error('🔥 Error fetch detail pengukuran:', err);
 		} finally {
@@ -76,11 +79,9 @@
 	});
 
 	function kembali() {
-		// Jika user punya halaman sebelumnya di history browser
 		if (window.history.length > 1) {
 			window.history.back();
 		} else {
-			// 🔹 Fallback jika halaman dibuka langsung atau tanpa riwayat
 			if (role === 'perawat') {
 				const idPerawat = sessionStorage.getItem('id_perawat');
 				goto(`/dashboard-perawat?id=${idPerawat}`);
@@ -94,14 +95,31 @@
 	function bukaRiwayat() {
 		goto(`/riwayat?id=${id_anak}`);
 	}
+
+	// 🔥 FUNGSI BARU: Untuk mendapatkan class warna berdasarkan status perkembangan
+	function getStatusColor(status: string) {
+		switch (status?.toLowerCase()) {
+			case 'sangat baik':
+				return 'text-green-600 bg-green-100';
+			case 'baik':
+				return 'text-blue-600 bg-blue-100';
+			case 'normal':
+				return 'text-green-600 bg-green-100';
+			case 'perlu perhatian':
+				return 'text-yellow-600 bg-yellow-100';
+			case 'berisiko':
+				return 'text-red-600 bg-red-100';
+			default:
+				return 'text-gray-600 bg-gray-100';
+		}
+	}
 </script>
 
 <div class="page-wrapper">
 	<h1 class="mb-4 text-4xl font-extrabold">Informasi anak</h1>
 
-	<!-- container utama -->
 	<div class="flex flex-1 flex-col gap-3 sm:flex-row">
-		<!-- card informasi -->
+
 		<div class="flex w-full flex-1 flex-col gap-2 rounded-xl">
 			<div class="card-B w-full bg-white">
 				<p>Nama: {anak.nama}</p>
@@ -138,20 +156,74 @@
 			{/if}
 		</div>
 
-		<!-- grafik -->
 		<div class="flex flex-2 flex-col gap-2">
 			<h2 class="block sm:hidden">Grafik Anak</h2>
 			<div class="card-A h-70 bg-white text-center">
 				{loading ? 'Memuat grafik...' : 'grafik anak'}
 			</div>
+			
+			<!--  PERUBAHAN: Bagian Analisis AI yang diperbarui -->
 			<h2 class="block sm:hidden">Analisis AI</h2>
-			<div class="card-A h-70 bg-white text-center">
-				{loading ? 'Memuat analisis...' : ai_analysis || 'analisis AI'}
+			<div class="card-A bg-white p-6">
+				{#if loading}
+					<div class="text-center">Memuat analisis AI...</div>
+				{:else if Object.keys(ai_analysis).length === 0}
+					<div class="text-center text-gray-500">Belum ada analisis AI</div>
+				{:else}
+					<div class="space-y-4">
+						<!-- Status Perkembangan -->
+						<div class="border-b pb-3">
+							<h3 class="text-lg font-semibold mb-2">Status Perkembangan</h3>
+							<div class="inline-block px-3 py-1 rounded-full {getStatusColor(ai_analysis.status_perkembangan)}">
+								{ai_analysis.status_perkembangan || 'Tidak tersedia'}
+							</div>
+						</div>
+
+						<!-- Analisis Umum -->
+						<div class="border-b pb-3">
+							<h3 class="text-lg font-semibold mb-2">Analisis Umum</h3>
+							<p class="text-gray-700 leading-relaxed">
+								{ai_analysis.analisis_umum || ai_analysis.ringkasan || 'Tidak ada analisis umum'}
+							</p>
+						</div>
+
+						<!-- Area Perhatian -->
+						{#if ai_analysis.area_perhatian && ai_analysis.area_perhatian.length > 0}
+							<div class="border-b pb-3">
+								<h3 class="text-lg font-semibold mb-2">Area Perhatian</h3>
+								<ul class="list-disc list-inside space-y-1">
+									{#each ai_analysis.area_perhatian as area}
+										<li class="text-gray-700">{area}</li>
+									{/each}
+								</ul>
+							</div>
+						{/if}
+
+						<!-- Rekomendasi -->
+						{#if ai_analysis.rekomendasi && ai_analysis.rekomendasi.length > 0}
+							<div class="border-b pb-3">
+								<h3 class="text-lg font-semibold mb-2">Rekomendasi</h3>
+								<ul class="list-disc list-inside space-y-1">
+									{#each ai_analysis.rekomendasi as rekomendasi}
+										<li class="text-gray-700">{rekomendasi}</li>
+									{/each}
+								</ul>
+							</div>
+						{/if}
+
+						<!-- Saran Pemantauan -->
+						{#if ai_analysis.saran_pemantauan}
+							<div>
+								<h3 class="text-lg font-semibold mb-2">Saran Pemantauan</h3>
+								<p class="text-gray-700 leading-relaxed">{ai_analysis.saran_pemantauan}</p>
+							</div>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>
 
-	<!-- tombol -->
 	<div class="mt-6 flex gap-4">
 		<button class="btn-A bg-gray-500 text-white" on:click={kembali}>Kembali</button>
 		<button class="btn-A ml-auto bg-blue-500 text-white" on:click={bukaRiwayat}>Riwayat</button>

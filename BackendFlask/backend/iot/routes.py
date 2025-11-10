@@ -157,65 +157,34 @@ def save_current():
     tinggi = request.form.get("tinggi_badan")
     berat = request.form.get("berat_badan")
 
-    anak_list = Anak.query.all()
-    pengukuran_list = Pengukuran.query.order_by(Pengukuran.id_pengukuran.desc()).all()
+    if not id_anak:
+        return jsonify({"error": "ID anak tidak valid"}), 400
 
-    # Cek validitas id_anak
-    if not id_anak or id_anak.strip() == "":
-        return render_template(
-            "form_pengukuran_step2.html",
-            anak_list=anak_list,
-            pengukuran_list=pengukuran_list,
-            error="❌ ID anak tidak ditemukan, silakan kembali ke Langkah 1."
-        )
+    peng = Pengukuran.query.get(id_pengukuran) if id_pengukuran else None
 
-    # ✅ Coba ambil pengukuran berdasarkan ID yang dikirim
-    peng = None
-    if id_pengukuran and id_pengukuran.strip() != "":
-        peng = Pengukuran.query.get(int(id_pengukuran))
-
-    # Kalau tidak ditemukan, buat baru
     if not peng:
         peng = Pengukuran(id_anak=int(id_anak))
         db.session.add(peng)
-        db.session.flush()  # flush dulu biar ID-nya langsung muncul
+        db.session.flush()
 
-    # ✅ Tangani pengisian data
-    if jenis in ["bbtb", "tinggiberat"]:
-        # BB & TB bisa tanpa data IoT
+    if jenis == "kepala":
+        nilai = request.form.get("nilai")
+        peng.lingkar_kepala = float(nilai)
+    elif jenis == "lengan":
+        nilai = request.form.get("nilai")
+        peng.lingkar_lengan = float(nilai)
+    elif jenis == "bbtb":
         if tinggi:
             peng.tinggi_badan = float(tinggi)
         if berat:
             peng.berat_badan = float(berat)
-    else:
-        # Pengukuran IoT: lingkar kepala atau lengan
-        if not latest_data:
-            return render_template(
-                "form_pengukuran_step2.html",
-                anak_list=anak_list,
-                pengukuran_list=pengukuran_list,
-                error="❌ Belum ada data IoT yang dikirim.",
-                id_anak=id_anak,
-                id_pengukuran=id_pengukuran
-            )
-
-        nilai = float(latest_data.get("nilai", 0))
-        if jenis == "kepala":
-            peng.lingkar_kepala = nilai
-        elif jenis == "lengan":
-            peng.lingkar_lengan = nilai
 
     db.session.commit()
 
-    return render_template(
-        "form_pengukuran_step2.html",
-        anak_list=anak_list,
-        pengukuran_list=pengukuran_list,
-        id_anak=id_anak,
-        id_pengukuran=peng.id_pengukuran,
-        success=f"✅ Data berhasil disimpan di ID {peng.id_pengukuran}!"
-    )
-
+    return jsonify({
+        "message": "Data berhasil disimpan",
+        "id_pengukuran": peng.id_pengukuran
+    }), 200
 
 
 # ==========================================================
@@ -406,7 +375,10 @@ def api_detail_pengukuran(id_anak):
         Jawab singkat dalam bahasa Indonesia dengan nada ramah dan mudah dipahami.
         """
 
-        ai_analysis = analyze_with_gemini(prompt)
+        ai_analysis_raw = analyze_with_gemini(prompt)
+        
+        # 🔥 PERUBAHAN: Parse response Gemini menjadi JSON terstruktur
+        ai_analysis_parsed = parse_gemini_response(ai_analysis_raw)
 
         return jsonify({
             "anak": {
@@ -426,11 +398,212 @@ def api_detail_pengukuran(id_anak):
             },
             "hasil": hasil,
             "imt": round(imt, 2) if imt else None,
-            "ai_analysis": ai_analysis
+            "ai_analysis": ai_analysis_parsed  # 🔥 Response yang sudah diparsing
         }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# ==========================================================
+# ✅ FUNGSI BARU: PARSE RESPONSE GEMINI MENJADI JSON
+# ==========================================================
+def parse_gemini_response(gemini_response):
+    """
+    Parse response Gemini AI menjadi format JSON yang terstruktur
+    untuk memudahkan parsing di frontend
+    """
+    try:
+        # Jika response sudah JSON, langsung return
+        if isinstance(gemini_response, dict):
+            return gemini_response
+            
+        response_text = str(gemini_response)
+        
+        # Coba parsing sebagai JSON jika mengandung struktur JSON
+        if "{" in response_text and "}" in response_text:
+            try:
+                # Cari bagian JSON dalam response
+                start_idx = response_text.find('{')
+                end_idx = response_text.rfind('}') + 1
+                if start_idx != -1 and end_idx != -1:
+                    json_str = response_text[start_idx:end_idx]
+                    return json.loads(json_str)
+            except:
+                pass  # Jika gagal, lanjut ke parsing teks
+        
+        # Parsing manual berdasarkan pola umum
+        parsed_response = {
+            "status_perkembangan": "Normal",  # default
+            "analisis_umum": "",
+            "area_perhatian": [],
+            "rekomendasi": [],
+            "saran_pemantauan": "",
+            "ringkasan": response_text[:200] + "..." if len(response_text) > 200 else response_text
+        }
+        
+        # Analisis teks untuk menentukan status perkembangan
+        text_lower = response_text.lower()
+        
+        # Deteksi status perkembangan
+        if any(word in text_lower for word in ["sangat baik", "optimal", "ideal", "baik sekali"]):
+            parsed_response["status_perkembangan"] = "Sangat Baik"
+        elif any(word in text_lower for word in ["baik", "normal", "sesuai", "memadai"]):
+            parsed_response["status_perkembangan"] = "Baik"
+        elif any(word in text_lower for word in ["perhatian", "waspada", "hati-hati", "perlu monitoring"]):
+            parsed_response["status_perkembangan"] = "Perlu Perhatian"
+        elif any(word in text_lower for word in ["risiko", "kurang", "terhambat", "masalah"]):
+            parsed_response["status_perkembangan"] = "Berisiko"
+        
+        # Deteksi area perhatian
+        areas = []
+        if any(word in text_lower for word in ["berat badan", "bb/", "berat"]):
+            areas.append("Berat Badan")
+        if any(word in text_lower for word in ["tinggi badan", "tb/", "tinggi", "panjang badan"]):
+            areas.append("Tinggi Badan")
+        if any(word in text_lower for word in ["imt", "indeks massa tubuh", "kegemukan", "kurus"]):
+            areas.append("IMT (Indeks Massa Tubuh)")
+        if any(word in text_lower for word in ["lingkar kepala", "lk/", "kepala"]):
+            areas.append("Lingkar Kepala")
+        if any(word in text_lower for word in ["lingkar lengan", "lila", "lengan"]):
+            areas.append("Lingkar Lengan")
+        
+        parsed_response["area_perhatian"] = areas if areas else ["Tidak ada area khusus yang perlu perhatian"]
+        
+        # Deteksi rekomendasi
+        recommendations = []
+        if any(word in text_lower for word in ["nutrisi", "gizi", "makanan", "asupan"]):
+            recommendations.append("Perbaikan asupan nutrisi")
+        if any(word in text_lower for word in ["pemantauan", "monitoring", "kontrol"]):
+            recommendations.append("Pemantauan rutin")
+        if any(word in text_lower for word in ["konsultasi", "dokter", "ahli gizi"]):
+            recommendations.append("Konsultasi dengan ahli")
+        
+        parsed_response["rekomendasi"] = recommendations if recommendations else ["Teruskan pola asuh yang baik"]
+        
+        # Analisis umum (ambil 2-3 kalimat pertama)
+        sentences = [s.strip() for s in response_text.split('.') if s.strip()]
+        parsed_response["analisis_umum"] = '. '.join(sentences[:3]) + '.' if sentences else response_text
+        
+        # Saran pemantauan (ambil kalimat terakhir atau buat default)
+        parsed_response["saran_pemantauan"] = sentences[-1] + '.' if sentences else "Lakukan pemantauan rutin setiap bulan."
+        
+        return parsed_response
+        
+    except Exception as e:
+        # Fallback jika parsing gagal
+        return {
+            "status_perkembangan": "Tidak Dapat Dianalisis",
+            "analisis_umum": str(gemini_response),
+            "area_perhatian": ["Data tidak cukup untuk analisis"],
+            "rekomendasi": ["Konsultasi dengan ahli gizi"],
+            "saran_pemantauan": "Perlu data lebih lengkap untuk analisis yang akurat",
+            "ringkasan": str(gemini_response)[:150] + "..." if len(str(gemini_response)) > 150 else str(gemini_response)
+        }
+
+# ==========================================================
+# ✅ API BARU: ANALISIS GEMINI SAJA (JSON RESPONSE)
+# ==========================================================
+@iot_bp.route("/api/gemini-analysis/<int:id_anak>", methods=["GET"])
+def api_gemini_analysis(id_anak):
+    """
+    Endpoint khusus untuk mendapatkan analisis Gemini dalam format JSON terstruktur
+    """
+    try:
+        anak = Anak.query.get_or_404(id_anak)
+        peng = (
+            Pengukuran.query
+            .filter_by(id_anak=id_anak)
+            .order_by(Pengukuran.created_at.desc(), Pengukuran.id_pengukuran.desc())
+            .first()
+        )
+
+        if not peng:
+            return jsonify({"error": "Belum ada data pengukuran"}), 404
+
+        umur_bulan = hitung_umur_bulan(anak.tanggal_lahir) if anak.tanggal_lahir else 0
+
+        hasil = {
+            "BB/U": {
+                "z_score": peng.z_bb,
+                "kategori": peng.kategori_bb
+            },
+            "TB/U": {
+                "z_score": peng.z_tb,
+                "kategori": peng.kategori_tb
+            },
+            "LK/U": {
+                "z_score": peng.z_lk,
+                "kategori": peng.kategori_lk
+            },
+            "LILA/U": {
+                "z_score": peng.z_lila,
+                "kategori": peng.kategori_lila
+            },
+            "IMT/U": {
+                "z_score": peng.z_imt,
+                "kategori": peng.kategori_imt
+            }
+        }
+
+        imt = peng.berat_badan / ((peng.tinggi_badan / 100) ** 2) if peng.tinggi_badan else None
+
+        # Prompt untuk Gemini
+        prompt = f"""
+        ANALISIS PERTUMBUHAN ANAK
+
+        DATA DASAR:
+        - Nama: {anak.nama}
+        - Usia: {umur_bulan} bulan
+        - Jenis Kelamin: {anak.jenis_kelamin}
+        
+        DATA PENGUKURAN:
+        - Berat Badan: {peng.berat_badan or 'Tidak ada'} kg
+        - Tinggi Badan: {peng.tinggi_badan or 'Tidak ada'} cm
+        - IMT: {round(imt, 2) if imt else 'Tidak dapat dihitung'}
+        - Lingkar Kepala: {peng.lingkar_kepala or 'Tidak ada'} cm
+        - Lingkar Lengan: {peng.lingkar_lengan or 'Tidak ada'} cm
+
+        HASIL ANALISIS STANDAR:
+        - BB/U: {hasil.get('BB/U', {}).get('kategori', 'Tidak ada data')} (Z-Score: {hasil.get('BB/U', {}).get('z_score', 'N/A')})
+        - TB/U: {hasil.get('TB/U', {}).get('kategori', 'Tidak ada data')} (Z-Score: {hasil.get('TB/U', {}).get('z_score', 'N/A')})
+        - IMT/U: {hasil.get('IMT/U', {}).get('kategori', 'Tidak ada data')} (Z-Score: {hasil.get('IMT/U', {}).get('z_score', 'N/A')})
+        - LK/U: {hasil.get('LK/U', {}).get('kategori', 'Tidak ada data')} (Z-Score: {hasil.get('LK/U', {}).get('z_score', 'N/A')})
+        - LILA/U: {hasil.get('LILA/U', {}).get('kategori', 'Tidak ada data')} (Z-Score: {hasil.get('LILA/U', {}).get('z_score', 'N/A')})
+
+        BERIKAN ANALISIS DALAM FORMAT YANG JELAS DAN TERSTRUKTUR:
+        1. Status perkembangan keseluruhan
+        2. Area yang memerlukan perhatian khusus
+        3. Rekomendasi tindakan
+        4. Saran pemantauan
+
+        Gunakan bahasa Indonesia yang mudah dipahami orang tua.
+        """
+
+        ai_analysis_raw = analyze_with_gemini(prompt)
+        ai_analysis_parsed = parse_gemini_response(ai_analysis_raw)
+
+        return jsonify({
+            "success": True,
+            "id_anak": id_anak,
+            "nama_anak": anak.nama,
+            "umur_bulan": umur_bulan,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "gemini_analysis": ai_analysis_parsed,
+            "raw_data": {
+                "berat_badan": peng.berat_badan,
+                "tinggi_badan": peng.tinggi_badan,
+                "lingkar_kepala": peng.lingkar_kepala,
+                "lingkar_lengan": peng.lingkar_lengan,
+                "imt": round(imt, 2) if imt else None
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "gemini_analysis": None
+        }), 500
 
     
 # ==========================================================
@@ -670,3 +843,51 @@ def api_get_anak(id_anak):
         "tanggal_lahir": anak.tanggal_lahir.strftime("%Y-%m-%d") if anak.tanggal_lahir else None,
         "id_orang_tua": anak.id_orang_tua
     })
+
+@iot_bp.route("/api/process/<int:id_pengukuran>", methods=["POST"])
+def process_pengukuran(id_pengukuran):
+    peng = Pengukuran.query.get(id_pengukuran)
+    if not peng:
+        return jsonify({"error": "Pengukuran tidak ditemukan"}), 404
+
+    anak = Anak.query.get(peng.id_anak)
+    if not anak:
+        return jsonify({"error": "Data anak tidak ditemukan"}), 404
+
+    if not peng.berat_badan or not peng.tinggi_badan:
+        return jsonify({"error": "Tinggi & berat badan wajib untuk analisis"}), 400
+
+    umur_bulan = hitung_umur_bulan(anak.tanggal_lahir)
+    sex = "Laki-Laki" if anak.jenis_kelamin in ["L", "l", "Laki-Laki"] else "Perempuan"
+
+    hasil = assess_child_growth(
+        sex=sex,
+        age_months=umur_bulan,
+        weight_kg=peng.berat_badan,
+        height_cm=peng.tinggi_badan,
+        head_circ=peng.lingkar_kepala or 0,
+        arm_circ=peng.lingkar_lengan or 0
+    )
+
+    peng.z_bb = hasil["BB/U"]["z_score"]
+    peng.kategori_bb = hasil["BB/U"]["kategori"]
+
+    peng.z_tb = hasil["TB/U"]["z_score"]
+    peng.kategori_tb = hasil["TB/U"]["kategori"]
+
+    peng.z_imt = hasil["IMT/U"]["z_score"]
+    peng.kategori_imt = hasil["IMT/U"]["kategori"]
+
+    peng.z_lk = hasil["LK/U"]["z_score"]
+    peng.kategori_lk = hasil["LK/U"]["kategori"]
+
+    peng.z_lila = hasil["LILA/U"]["z_score"]
+    peng.kategori_lila = hasil["LILA/U"]["kategori"]
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Analisis gizi berhasil diproses",
+        "hasil": hasil
+    }), 200
+
