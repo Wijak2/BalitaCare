@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { writable, derived } from 'svelte/store';
 	import { goto } from '$app/navigation';
+	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
 	type Anak = {
 		id: number;
@@ -13,6 +14,9 @@
 
 	const anakList = writable<Anak[]>([]);
 	const search = writable('');
+
+	// Backend URL dari .env
+	const BACKEND_URL = `${PUBLIC_BACKEND_URL}/iot`;
 
 	// ✅ NOTIFIKASI
 	const notification = writable<{ message: string; type: 'success' | 'error' | '' }>({
@@ -38,7 +42,7 @@
 		if (!anakToDelete) return;
 
 		try {
-			const res = await fetch(`http://127.0.0.1:5000/iot/anak/delete/${anakToDelete}`, {
+			const res = await fetch(`${BACKEND_URL}/anak/delete/${anakToDelete}`, {
 				method: 'POST'
 			});
 
@@ -68,8 +72,8 @@
 	// Ambil data anak dari backend
 	async function loadAnak() {
 		try {
-			let urlAnak = `http://127.0.0.1:5000/iot/api/anak`;
-			if (idOrangtua) urlAnak = `http://127.0.0.1:5000/iot/api/anak-by-orangtua/${idOrangtua}`;
+			let urlAnak = `${BACKEND_URL}/api/anak`;
+			if (idOrangtua) urlAnak = `${BACKEND_URL}/api/anak-by-orangtua/${idOrangtua}`;
 
 			const resAnak = await fetch(urlAnak);
 			const dataAnak = await resAnak.json();

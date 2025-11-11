@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { PUBLIC_BACKEND_URL } from "$env/static/public";
+
+	const BACKEND_URL = `${PUBLIC_BACKEND_URL}/auth`;
+
 	let nama = "";
 	let email = "";
 	let password = "";
@@ -12,7 +16,7 @@
 		success = false;
 
 		try {
-			const res = await fetch("http://127.0.0.1:5000/auth/register", {
+			const res = await fetch(`${BACKEND_URL}/register`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ nama, email, password, no_hp })
@@ -28,7 +32,6 @@
 			message = data.message || "Registrasi berhasil!";
 			success = true;
 
-			// tunggu sebentar lalu arahkan ke login
 			setTimeout(() => {
 				window.location.href = "/login";
 			}, 1500);

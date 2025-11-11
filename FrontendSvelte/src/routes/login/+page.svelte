@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { PUBLIC_BACKEND_URL } from "$env/static/public";
+
+  const BACKEND_URL = `${PUBLIC_BACKEND_URL}/auth`;
+
   let notelp = "";
   let password = "";
   let message = "";
@@ -17,11 +21,11 @@
     message = "";
 
     try {
-      const res = await fetch("http://127.0.0.1:5000/auth/login", {
+      const res = await fetch(`${BACKEND_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          identifier: notelp,        // ✅ ganti nomor_hp → identifier
+          identifier: notelp,
           password
         })
       });
@@ -33,10 +37,8 @@
         return;
       }
 
-      // ✅ Simpan token
-      localStorage.setItem("token", data.token);
+      sessionStorage.setItem("token", data.token);
 
-      // ✅ Decode token ambil role & user_id
       const payload = decodeJWT(data.token);
       if (!payload) {
         message = "Token tidak valid.";
@@ -44,11 +46,9 @@
       }
 
       const role = payload.role;
-      const user_id = payload.user_id;
 
       message = "Login berhasil!";
 
-      // ✅ Arahkan sesuai role
       if (role === "orang_tua") {
         window.location.href = "/dashboard-orangtua";
       } else if (role === "perawat") {

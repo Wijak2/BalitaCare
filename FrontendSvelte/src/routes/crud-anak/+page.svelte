@@ -3,6 +3,9 @@
 	import { page } from "$app/stores";
 	import { goto } from "$app/navigation";
 	import { writable } from "svelte/store";
+	import { PUBLIC_BACKEND_URL } from "$env/static/public";
+
+	const BACKEND_URL = `${PUBLIC_BACKEND_URL}/iot`;
 
 	const notification = writable<{ message: string; type: 'success' | 'error' | '' }>({
 		message: '',
@@ -14,25 +17,22 @@
 		setTimeout(() => notification.set({ message: '', type: '' }), 2000);
 	}
 
-	// --- Data form ---
 	let idAnak: string | null = null;
 	let idOrangtua: string | null = null;
 	let nama = '';
 	let jenis_kelamin = '';
 	let tanggal_lahir = '';
 
-	// Ambil query param
 	$: idAnak = $page.url.searchParams.get('id_anak');
 
-	// ID orang tua:
-	// - dari query param (jika edit dari halaman lain)
-	// - dari localStorage (jika perawat klik tambah anak)
-	$: idOrangtua = $page.url.searchParams.get('id_orangtua') || localStorage.getItem('selected_orangtua');
+	$: idOrangtua =
+		$page.url.searchParams.get('id_orangtua') ||
+		localStorage.getItem('selected_orangtua');
 
 	onMount(async () => {
 		if (idAnak) {
 			try {
-				const res = await fetch(`http://127.0.0.1:5000/iot/api/anak/${idAnak}`);
+				const res = await fetch(`${BACKEND_URL}/api/anak/${idAnak}`);
 				if (res.ok) {
 					const data = await res.json();
 					nama = data.nama;
@@ -47,7 +47,6 @@
 		}
 	});
 
-	// Fungsi kembali
 	let role = sessionStorage.getItem('role');
 
 	function kembali() {
@@ -62,7 +61,6 @@
 		}
 	}
 
-	// Simpan data anak
 	async function submitForm() {
 		if (!idOrangtua) {
 			showNotification('ID orang tua tidak ditemukan', 'error');
@@ -75,9 +73,9 @@
 		formData.append('tanggal_lahir', tanggal_lahir);
 
 		try {
-			let url = `http://127.0.0.1:5000/iot/anak/add-by-orangtua/${idOrangtua}`;
+			let url = `${BACKEND_URL}/anak/add-by-orangtua/${idOrangtua}`;
 			if (idAnak) {
-				url = `http://127.0.0.1:5000/iot/anak/edit/${idAnak}`;
+				url = `${BACKEND_URL}/anak/edit/${idAnak}`;
 			}
 
 			const res = await fetch(url, {

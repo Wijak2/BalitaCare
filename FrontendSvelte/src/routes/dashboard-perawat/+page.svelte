@@ -2,8 +2,9 @@
   import { onMount } from "svelte";
   import { writable, derived } from "svelte/store";
   import { goto } from "$app/navigation";
+  import { PUBLIC_BACKEND_URL } from "$env/static/public";
 
-  const BACKEND_URL = "http://127.0.0.1:5000/iot";
+  const BACKEND_URL = `${PUBLIC_BACKEND_URL}/iot`;
 
   let statsPerawat = [
     { title: "Jumlah Orang Tua Terdaftar", value: 0 },
@@ -32,7 +33,7 @@
   }
 
   onMount(async () => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     if (!token) {
       alert("Anda belum login");
@@ -53,6 +54,7 @@
         headers: { Authorization: "Bearer " + token }
       });
       const dataStats = await resStats.json();
+
       statsPerawat = [
         { title: "Jumlah Orang Tua Terdaftar", value: dataStats.orangtua },
         { title: "Jumlah Balita Terdaftar", value: dataStats.anak },
@@ -71,12 +73,12 @@
   });
 
   function goListBalita(id_orang_tua: number) {
-    localStorage.setItem("selected_orangtua", String(id_orang_tua));
+    sessionStorage.setItem("selected_orangtua", String(id_orang_tua));
     goto("/list-balita");
   }
 
   function goTambahAnak(id_orang_tua: number) {
-    localStorage.setItem("selected_orangtua", String(id_orang_tua));
+    sessionStorage.setItem("selected_orangtua", String(id_orang_tua));
     goto("/crud-anak");
   }
 </script>

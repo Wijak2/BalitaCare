@@ -891,3 +891,144 @@ def process_pengukuran(id_pengukuran):
         "hasil": hasil
     }), 200
 
+
+@iot_bp.route("/api/pengukuran/<int:id_anak>/grafik", methods=["GET"])
+def api_pengukuran_grafik(id_anak):
+    """
+    Mengembalikan data grafik untuk anak:
+    - monthly: ambil 1 data terbaru per bulan berdasarkan field `tanggal`
+    - yearly: rata-rata per tahun (A)
+    """
+    try:
+        # ambil semua pengukuran anak dengan tanggal tidak kosong
+        data = (
+            Pengukuran.query
+            .filter(Pengukuran.id_anak == id_anak, Pengukuran.tanggal != None)
+            .order_by(Pengukuran.tanggal.asc())
+            .all()
+        )
+
+        if not data or len(data) == 0:
+            return jsonify({"error": "Belum ada data pengukuran"}), 404
+
+        # --- Monthly: ambil pengukuran terbaru per bulan (key: (year, month)) ---
+        latest_per_month = {}  # (year, month) -> Pengukuran
+        for p in data:
+            dt = p.tanggal if p.tanggal else p.created_at
+            if not dt:
+                continue
+            key = (dt.year, dt.month)
+            # simpan yang terbaru (tanggal paling besar)
+            if key not in latest_per_month or (p.tanggal and p.tanggal > latest_per_month[key].tanggal):
+                latest_per_month[key] = p
+
+        # Susun monthly list terurut berdasarkan year-month
+        monthly_items = sorted(latest_per_month.items(), key=lambda kv: (kv[0][0], kv[0][1]))
+        monthly_categories = []
+        monthly_berat = []
+        monthly_tinggi = []
+        monthly_imt = []      # TAMBAHAN: IMT
+        monthly_lila = []     # TAMBAHAN: LILA  
+        monthly_lk = []       # TAMBAHAN: LK
+        monthly_zbb = []
+        monthly_ztb = []
+        monthly_zlk = []
+        monthly_zimt = []
+        monthly_zlila = []
+
+        for (y,m), p in monthly_items:
+            # category sebagai 'YYYY-MM' (frontend bisa format ke tampilannya)
+            monthly_categories.append(f"{y:04d}-{m:02d}")
+            monthly_berat.append(p.berat_badan if p.berat_badan is not None else None)
+            monthly_tinggi.append(p.tinggi_badan if p.tinggi_badan is not None else None)
+            # TAMBAHAN: hitung IMT jika ada berat dan tinggi
+            if p.berat_badan and p.tinggi_badan and p.tinggi_badan > 0:
+                # IMT = berat(kg) / (tinggi(m))^2
+                tinggi_meter = p.tinggi_badan / 100
+                imt_value = p.berat_badan / (tinggi_meter * tinggi_meter)
+                monthly_imt.append(round(imt_value, 2))
+            else:
+                monthly_imt.append(None)
+            monthly_lila.append(p.lingkar_lengan if p.lingkar_lengan is not None else None)
+            monthly_lk.append(p.lingkar_kepala if p.lingkar_kepala is not None else None)
+            # z-score fields (jika ada di model)
+            monthly_zbb.append(getattr(p, "z_bb", None))
+            monthly_ztb.append(getattr(p, "z_tb", None))
+            monthly_zlk.append(getattr(p, "z_lk", None))
+            monthly_zimt.append(getattr(p, "z_imt", None))
+            monthly_zlila.append(getattr(p, "z_lila", None))
+
+        # --- Yearly: rata-rata per tahun ---
+        yearly_map = {}  # year -> { berat: [], tinggi: [], imt: [], lila: [], lk: [] }
+        for p in data:
+            dt = p.tanggal if p.tanggal else p.created_at
+            if not dt:
+                continue
+            year = dt.year
+            if year not in yearly_map:
+                yearly_map[year] = {"berat": [], "tinggi": [], "imt": [], "lila": [], "lk": []}
+            if p.berat_badan is not None:
+                yearly_map[year]["berat"].append(p.berat_badan)
+            if p.tinggi_badan is not None:
+                yearly_map[year]["tinggi"].append(p.tinggi_badan)
+            if p.lingkar_lengan is not None:
+                yearly_map[year]["lila"].append(p.lingkar_lengan)
+            if p.lingkar_kepala is not None:
+                yearly_map[year]["lk"].append(p.lingkar_kepala)
+            # TAMBAHAN: hitung IMT untuk yearly
+            if p.berat_badan and p.tinggi_badan and p.tinggi_badan > 0:
+                tinggi_meter = p.tinggi_badan / 100
+                imt_value = p.berat_badan / (tinggi_meter * tinggi_meter)
+                yearly_map[year]["imt"].append(imt_value)
+
+        years = sorted(yearly_map.keys())
+        yearly_categories = [str(y) for y in years]
+        yearly_berat = [
+            round(sum(yearly_map[y]["berat"]) / len(yearly_map[y]["berat"]), 2) if yearly_map[y]["berat"] else None
+            for y in years
+        ]
+        yearly_tinggi = [
+            round(sum(yearly_map[y]["tinggi"]) / len(yearly_map[y]["tinggi"]), 2) if yearly_map[y]["tinggi"] else None
+            for y in years
+        ]
+        # TAMBAHAN: yearly averages untuk IMT, LILA, LK
+        yearly_imt = [
+            round(sum(yearly_map[y]["imt"]) / len(yearly_map[y]["imt"]), 2) if yearly_map[y]["imt"] else None
+            for y in years
+        ]
+        yearly_lila = [
+            round(sum(yearly_map[y]["lila"]) / len(yearly_map[y]["lila"]), 2) if yearly_map[y]["lila"] else None
+            for y in years
+        ]
+        yearly_lk = [
+            round(sum(yearly_map[y]["lk"]) / len(yearly_map[y]["lk"]), 2) if yearly_map[y]["lk"] else None
+            for y in years
+        ]
+
+        return jsonify({
+            "monthly": {
+                "categories": monthly_categories,
+                "berat": monthly_berat,
+                "tinggi": monthly_tinggi,
+                "imt": monthly_imt,      # TAMBAHAN
+                "lila": monthly_lila,    # TAMBAHAN
+                "lk": monthly_lk,        # TAMBAHAN
+                "z_bb": monthly_zbb,
+                "z_tb": monthly_ztb,
+                "z_lk": monthly_zlk,
+                "z_imt": monthly_zimt,
+                "z_lila": monthly_zlila
+            },
+            "yearly": {
+                "categories": yearly_categories,
+                "berat": yearly_berat,
+                "tinggi": yearly_tinggi,
+                "imt": yearly_imt,      # TAMBAHAN
+                "lila": yearly_lila,    # TAMBAHAN
+                "lk": yearly_lk         # TAMBAHAN
+            }
+        }), 200
+
+    except Exception as e:
+        # jangan expose sensitive info di production; untuk debugging sekarang sertakan error
+        return jsonify({"error": str(e)}), 500

@@ -2,7 +2,7 @@ from datetime import datetime
 from .extensions import db
 
 # ========================
-# 👨‍👩‍👧 Model Orang Tua
+# Model Orang Tua
 # ========================
 class OrangTua(db.Model):
     __tablename__ = "orang_tua"
@@ -21,7 +21,7 @@ class OrangTua(db.Model):
 
 
 # ========================
-# 👩‍⚕️ Model Perawat / Admin
+# Model Perawat / Admin
 # ========================
 class Perawat(db.Model):
     __tablename__ = "perawat"
@@ -38,7 +38,7 @@ class Perawat(db.Model):
 
 
 # ========================
-# 👶 Model Anak
+# Model Anak
 # ========================
 class Anak(db.Model):
     __tablename__ = "anak"
@@ -58,7 +58,7 @@ class Anak(db.Model):
 
 
 # ========================
-# 📏 Model Pengukuran
+# Model Pengukuran
 # ========================
 class Pengukuran(db.Model):
     __tablename__ = "pengukuran"

@@ -2,12 +2,17 @@
   import { onMount } from "svelte";
   import { writable, derived } from "svelte/store";
   import { goto } from "$app/navigation";
+  import { PUBLIC_BACKEND_URL } from "$env/static/public";
 
-  const BACKEND_URL = "http://127.0.0.1:5000/iot";
+  // Backend URL dari .env
+  const BACKEND_URL = `${PUBLIC_BACKEND_URL}/iot`;
 
   const balitaList = writable<{ id: number; nama: string; tglLahir: string; status: string }[]>([]);
   const search = writable("");
-  const notification = writable<{ message: string; type: "success" | "error" | "" }>({ message: "", type: "" });
+  const notification = writable<{ message: string; type: "success" | "error" | "" }>({
+    message: "",
+    type: ""
+  });
 
   let showConfirmModal = false;
   let anakToDelete: number | null = null;
@@ -61,7 +66,9 @@
       const res = await fetch(`${BACKEND_URL}/api/anak-by-orangtua/${idOrangtua}`, {
         headers: { Authorization: "Bearer " + token }
       });
+
       const data = await res.json();
+
       balitaList.set(
         data.map((a: any) => ({
           id: a.id_anak,
@@ -80,19 +87,33 @@
     setTimeout(() => notification.set({ message: "", type: "" }), 2500);
   }
 
-  function mulaiPengukuran(idAnak: number) { goto(`/form-pengukuran-step1?id_anak=${idAnak}`); }
-  function detailPengukuran(idAnak: number) { goto(`/detail-pengukuran?id=${idAnak}`); }
-  function editAnak(id: number) { goto(`/crud-anak?id_anak=${id}&id_orangtua=${idOrangtua}`); }
-  function konfirmasiHapus(id: number) { anakToDelete = id; showConfirmModal = true; }
+  function mulaiPengukuran(idAnak: number) {
+    goto(`/form-pengukuran-step1?id_anak=${idAnak}`);
+  }
+
+  function detailPengukuran(idAnak: number) {
+    goto(`/detail-pengukuran?id=${idAnak}`);
+  }
+
+  function editAnak(id: number) {
+    goto(`/crud-anak?id_anak=${id}&id_orangtua=${idOrangtua}`);
+  }
+
+  function konfirmasiHapus(id: number) {
+    anakToDelete = id;
+    showConfirmModal = true;
+  }
 
   async function hapusAnak() {
     if (!anakToDelete) return;
+
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${BACKEND_URL}/anak/delete/${anakToDelete}`, {
         method: "POST",
         headers: { Authorization: "Bearer " + token }
       });
+
       if (res.ok) {
         balitaList.update((list) => list.filter((a) => a.id !== anakToDelete));
         showNotification("✅ Anak berhasil dihapus", "success");

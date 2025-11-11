@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from '$app/navigation';
+  import { PUBLIC_BACKEND_URL } from "$env/static/public";
+
+  const BACKEND_URL = `${PUBLIC_BACKEND_URL}/iot`;
 
   let id_anak: string | null = null;
   let data: any[] = [];
   let loading = true;
-
-  const BACKEND_URL = "http://localhost:5000/iot";
 
   onMount(async () => {
     try {
@@ -25,21 +26,21 @@
     }
   });
 
-	let role = sessionStorage.getItem('role');
+  let role = sessionStorage.getItem('role');
 
-	function kembali() {
-		if (window.history.length > 1) {
-			window.history.back();
-		} else {
-			if (role === 'perawat') {
-				const idPerawat = sessionStorage.getItem('id_perawat');
-				goto(`/dashboard-perawat?id=${idPerawat}`);
-			} else {
-				const idOrangtua = sessionStorage.getItem('id_orangtua');
-				goto(`/dashboard-orangtua?id=${idOrangtua}`);
-			}
-		}
-	}
+  function kembali() {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      if (role === 'perawat') {
+        const idPerawat = sessionStorage.getItem('id_perawat');
+        goto(`/dashboard-perawat?id=${idPerawat}`);
+      } else {
+        const idOrangtua = sessionStorage.getItem('id_orangtua');
+        goto(`/dashboard-orangtua?id=${idOrangtua}`);
+      }
+    }
+  }
 
   function formatTanggal(t: string | null) {
     if (!t) return "-";

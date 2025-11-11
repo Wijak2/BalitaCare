@@ -4,8 +4,10 @@
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { writable } from 'svelte/store';
+	import { PUBLIC_BACKEND_URL } from "$env/static/public";
 
-	// ✅ NOTIFIKASI
+	const BACKEND_URL = `${PUBLIC_BACKEND_URL}/iot`;
+
 	const notification = writable<{ message: string; type: 'success' | 'error' | '' }>({
 		message: '',
 		type: ''
@@ -20,7 +22,7 @@
 
 	let idAnak = '';
 	let idPengukuran = '';
-	let activeForm = 'kepala'; // default tab aktif
+	let activeForm = 'kepala';
 	let iotKepala: number | null = null;
 	let iotLengan: number | null = null;
 	let tinggiBadan = '';
@@ -29,7 +31,6 @@
 
 	let iotInterval: any = null;
 
-	// 🔹 Ambil parameter dari URL & data anak
 	onMount(async () => {
 		const currentPage = get(page);
 		idAnak = currentPage.url.searchParams.get('id_anak') || '';
@@ -37,7 +38,7 @@
 
 		if (idAnak) {
 			try {
-				const res = await fetch(`http://127.0.0.1:5000/iot/api/anak/${idAnak}`);
+				const res = await fetch(`${BACKEND_URL}/api/anak/${idAnak}`);
 				const data = await res.json();
 				anakNama = data.nama || '(Nama tidak ditemukan)';
 			} catch (err) {
@@ -45,7 +46,6 @@
 			}
 		}
 
-		// Mulai polling IoT setiap 2 detik
 		await loadLatestIoT();
 		iotInterval = setInterval(loadLatestIoT, 2000);
 	});
@@ -54,14 +54,14 @@
 		if (iotInterval) clearInterval(iotInterval);
 	});
 
-	// 🔹 Load data IoT terbaru
 	async function loadLatestIoT() {
 		try {
-			const res = await fetch('http://127.0.0.1:5000/iot/latest-json');
+			const res = await fetch(`${BACKEND_URL}/latest-json`);
 			const data = await res.json();
+
 			if (data && data.nilai !== undefined && data.nilai !== null) {
 				iotKepala = parseFloat(data.nilai);
-				iotLengan = parseFloat(data.nilai); // bisa diganti sesuai sensor masing2
+				iotLengan = parseFloat(data.nilai);
 			}
 		} catch (err) {
 			console.error('Gagal ambil data IoT:', err);
@@ -70,7 +70,6 @@
 		}
 	}
 
-	// 🔹 Simpan data ke backend
 	async function saveData() {
 		if (!idAnak || !idPengukuran) {
 			showNotification('❌ ID anak atau ID pengukuran tidak ditemukan', 'error');
@@ -102,11 +101,13 @@
 		}
 
 		try {
-			const res = await fetch('http://127.0.0.1:5000/iot/save-current', {
+			const res = await fetch(`${BACKEND_URL}/save-current`, {
 				method: 'POST',
 				body: formData
 			});
+
 			const data = await res.text();
+
 			if (res.ok) {
 				showNotification('✅ Data berhasil disimpan', 'success');
 			} else {
@@ -119,37 +120,36 @@
 	}
 
 	async function processAnalisis() {
-	if (!idPengukuran) {
-		showNotification('❌ ID pengukuran tidak ditemukan', 'error');
-		return;
-	}
-
-	try {
-		const res = await fetch(`http://127.0.0.1:5000/iot/api/process/${idPengukuran}`, {
-			method: 'POST'
-		});
-		const data = await res.json();
-
-		if (!res.ok) {
-			showNotification(`❌ ${data.error || 'Gagal memproses analisis'}`, 'error');
+		if (!idPengukuran) {
+			showNotification('❌ ID pengukuran tidak ditemukan', 'error');
 			return;
 		}
 
-		showNotification('✅ Analisis berhasil diproses', 'success');
+		try {
+			const res = await fetch(`${BACKEND_URL}/api/process/${idPengukuran}`, {
+				method: 'POST'
+			});
+			const data = await res.json();
 
-		console.log('Hasil analisis:', data);
+			if (!res.ok) {
+				showNotification(`❌ ${data.error || 'Gagal memproses analisis'}`, 'error');
+				return;
+			}
 
-	} catch (err) {
-		console.error(err);
-		showNotification('❌ Terjadi kesalahan saat memproses analisis', 'error');
+			showNotification('✅ Analisis berhasil diproses', 'success');
+			console.log('Hasil analisis:', data);
+
+		} catch (err) {
+			console.error(err);
+			showNotification('❌ Terjadi kesalahan saat memproses analisis', 'error');
+		}
 	}
-}
-
 
 	function showForm(form: string) {
 		activeForm = form;
 	}
 </script>
+
 
 {#if $notification.message}
 	<div

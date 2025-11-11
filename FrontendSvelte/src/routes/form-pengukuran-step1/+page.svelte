@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
+  import { PUBLIC_BACKEND_URL } from "$env/static/public";
+
+  const BACKEND_URL = `${PUBLIC_BACKEND_URL}/iot`;
 
   let daftarAnak: any[] = [];
   let selectedAnak = "";
@@ -9,8 +12,6 @@
   let selectedPengukuran = "";
   let message = "";
   let isExisting = false;
-
-  const BACKEND_URL = "http://127.0.0.1:5000/iot";
 
   let idPerawat: string | null = null;
 
@@ -31,7 +32,6 @@
       return;
     }
 
-    // ✅ Ambil user_id dari token
     const payload = decodeJWT(token);
     idPerawat = payload?.user_id || null;
 
@@ -41,11 +41,9 @@
       return;
     }
 
-    // ✅ Ambil id_anak dari URL
     const params = new URLSearchParams(window.location.search);
     const idAnakUrl = params.get("id_anak");
 
-    // Ambil daftar anak
     const res = await fetch(`${BACKEND_URL}/api/anak`, {
       headers: {
         Authorization: "Bearer " + token
@@ -116,7 +114,6 @@
     goto(`/dashboard-perawat`);
   }
 </script>
-
 
 <div class="page-wrapper flex items-center justify-center">
   <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-lg space-y-6 border border-blue-100">

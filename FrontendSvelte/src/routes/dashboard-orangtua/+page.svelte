@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
 	let anakList: any[] = [];
 	let id_orang_tua: string | null = null;
@@ -16,7 +17,7 @@
 	}
 
 	function cekToken() {
-		const token = localStorage.getItem("token");
+		const token = sessionStorage.getItem("token")
 		if (!token) {
 			alert("Anda belum login!");
 			goto("/login");
@@ -39,7 +40,7 @@
 
 		try {
 			const res = await fetch(
-				`http://127.0.0.1:5000/iot/api/anak-by-orangtua/${id_orang_tua}`,
+				`${PUBLIC_BACKEND_URL}/iot/api/anak-by-orangtua/${id_orang_tua}`,
 				{ headers: { Authorization: "Bearer " + token } }
 			);
 
@@ -94,6 +95,7 @@
 		navigasiKe(`/detail-pengukuran?id=${anak.id_anak}`);
 	}
 </script>
+
 
 <header
 	class="hidden py-14 text-center text-gray-100 sm:block"
