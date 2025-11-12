@@ -8,9 +8,9 @@
 	let id_orang_tua: string | null = null;
 	let isOpen = false;
 
-	// Ambil data user dari localStorage
+	// Ambil data user dari sessionStorage
 	if (typeof window !== 'undefined') {
-		const token = localStorage.getItem('token');
+		const token = sessionStorage.getItem('token');
 		if (token) {
 			const payload = decodeJWT(token);
 			if (payload) {
@@ -30,7 +30,7 @@
 	}
 
 	function logout() {
-		localStorage.clear();
+		sessionStorage.clear();
 		goto('/login');
 	}
 

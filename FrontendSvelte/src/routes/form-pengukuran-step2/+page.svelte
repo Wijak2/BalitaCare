@@ -199,7 +199,7 @@
 				<div>
 					<h5>Pengukuran Lingkar Kepala</h5>
 					<div
-						class="mb-4 flex h-40 items-center justify-center rounded-xl bg-gray-300 p-6 text-center"
+						class="my-4 flex h-40 items-center justify-center rounded-xl bg-gray-200 p-6 text-center"
 					>
 						{#if iotKepala !== null}
 							Data IoT: <b>{iotKepala} cm</b>
@@ -207,7 +207,7 @@
 							Menunggu data IoT...
 						{/if}
 					</div>
-					<p class="text-[0.85em] text-gray-500">
+					<p class="text-[0.85em] text-gray-500 mb-4">
 						Data ini akan tersimpan di DB saat klik tombol Simpan.
 					</p>
 				</div>
@@ -217,7 +217,7 @@
 				<div>
 					<h5>Pengukuran Lingkar Lengan</h5>
 					<div
-						class="mb-4 flex h-40 items-center justify-center rounded-xl bg-gray-300 p-6 text-center"
+						class="my-4 flex h-40 items-center justify-center rounded-xl bg-gray-200 p-6 text-center"
 					>
 						{#if iotLengan !== null}
 							Data IoT: <b>{iotLengan} cm</b>
@@ -225,7 +225,7 @@
 							Menunggu data IoT...
 						{/if}
 					</div>
-					<p class="text-[0.85em] text-gray-500">
+					<p class="text-[0.85em] text-gray-500 mb-4">
 						Data ini akan tersimpan di DB saat klik tombol Simpan.
 					</p>
 				</div>
@@ -256,14 +256,14 @@
 			<div class="mt-auto flex flex-col gap-3">
 				<button
 					class="btn-A w-full bg-green-500 text-white transition hover:bg-green-600"
-					on:click={saveData}>💾 Simpan Pengukuran</button
+					on:click={saveData}>Simpan Pengukuran</button
 				>
 
 				<button
-					class="btn-A w-full bg-purple-600 text-white transition hover:bg-purple-700"
+					class="btn-A w-full bg-blue-600 text-white transition hover:bg-blue-700"
 					on:click={processAnalisis}
 				>
-					⚙️ Proses Analisis Gizi
+					Proses Analisis Gizi
 				</button>
 
 				<button

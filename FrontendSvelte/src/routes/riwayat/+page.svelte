@@ -50,8 +50,8 @@
   }
 </script>
 
-<section class="orangtua-dashboard min-w-[800px] mx-auto p-6">
-  <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-4xl mx-auto space-y-6">
+<section class="page-wrapper">
+  <div class="table-container">
     <h1 class="text-3xl font-extrabold text-center text-blue-900 mb-6">
       Riwayat Pengukuran
     </h1>
@@ -62,7 +62,6 @@
       <table class="w-full text-left border-collapse bg-blue-50/30 rounded-xl overflow-hidden shadow-sm">
         <thead class="bg-blue-200">
           <tr>
-            <th class="p-3">ID Pengukuran</th>
             <th class="p-3">Lingkar Kepala (cm)</th>
             <th class="p-3">Lingkar Lengan (cm)</th>
             <th class="p-3">Berat Badan (kg)</th>
@@ -73,7 +72,6 @@
         <tbody>
           {#each data as item, i}
             <tr class={i % 2 === 0 ? "bg-blue-50" : "bg-white"}>
-              <td class="p-2 font-medium">{item.id_pengukuran}</td>
               <td class="p-2">{item.lingkar_kepala ?? '-'}</td>
               <td class="p-2">{item.lingkar_lengan ?? '-'}</td>
               <td class="p-2">{item.berat_badan ?? '-'}</td>

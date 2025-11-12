@@ -10,23 +10,23 @@
 
 	function decodeJWT(token: string) {
 		try {
-			return JSON.parse(atob(token.split(".")[1]));
+			return JSON.parse(atob(token.split('.')[1]));
 		} catch {
 			return null;
 		}
 	}
 
 	function cekToken() {
-		const token = sessionStorage.getItem("token")
+		const token = sessionStorage.getItem('token');
 		if (!token) {
-			alert("Anda belum login!");
-			goto("/login");
+			alert('Anda belum login!');
+			goto('/login');
 			return null;
 		}
 		const payload = decodeJWT(token);
 		if (!payload || !payload.user_id) {
-			alert("Sesi tidak valid, silakan login ulang.");
-			goto("/login");
+			alert('Sesi tidak valid, silakan login ulang.');
+			goto('/login');
 			return null;
 		}
 		return token;
@@ -39,10 +39,9 @@
 		id_orang_tua = decodeJWT(token).user_id;
 
 		try {
-			const res = await fetch(
-				`${PUBLIC_BACKEND_URL}/iot/api/anak-by-orangtua/${id_orang_tua}`,
-				{ headers: { Authorization: "Bearer " + token } }
-			);
+			const res = await fetch(`${PUBLIC_BACKEND_URL}/iot/api/anak-by-orangtua/${id_orang_tua}`, {
+				headers: { Authorization: 'Bearer ' + token }
+			});
 
 			const data = await res.json();
 			anakList = data;
@@ -52,7 +51,7 @@
 				selectedAnak = anakList[0];
 			}
 		} catch (err) {
-			console.error("Gagal memuat data anak:", err);
+			console.error('Gagal memuat data anak:', err);
 		} finally {
 			isLoading = false;
 		}
@@ -96,7 +95,6 @@
 	}
 </script>
 
-
 <header
 	class="hidden py-14 text-center text-gray-100 sm:block"
 	style="background: linear-gradient(to right, #029ae2, #6ed3ff);"
@@ -121,11 +119,15 @@
 	<script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
 	<el-dropdown class="mb-2 block inline-block w-full sm:hidden">
 		<button
-			class="inline-flex w-full justify-center gap-x-1.5 rounded-md bg-blue-500 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-600"
+			class="shadow-xs inline-flex w-full justify-center gap-x-1.5 rounded-md bg-blue-500 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-600"
 		>
 			{selectedAnak ? selectedAnak.nama : 'Pilih Anak'}
 			<svg viewBox="0 0 20 20" fill="currentColor" class="-mr-1 size-5 text-gray-200">
-				<path fill-rule="evenodd" clip-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"/>
+				<path
+					fill-rule="evenodd"
+					clip-rule="evenodd"
+					d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+				/>
 			</svg>
 		</button>
 
@@ -152,10 +154,69 @@
 	<!-- DESKTOP & MOBILE CARDS -->
 	<div class="hidden sm:block">
 		<div class="flex h-[60vh] gap-4">
-			<!-- GRAFIK -->
-			<div class="card-A flex-3 bg-white text-center">
+			<!-- GRAFIK + DATA PENGUKURAN TERAKHIR + STATUS GIZI -->
+			<div class="card-A flex-3 bg-white p-4 text-center">
 				{#if selectedAnak}
-					<p class="mb-4 text-lg font-semibold">Grafik {selectedAnak.nama}</p>
+					<p class="mb-4 text-lg font-semibold">{selectedAnak.nama} - Pengukuran Terakhir</p>
+
+					<!-- Info Pengukuran -->
+					<div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+						<div class="rounded bg-gray-50 p-2">
+							<p class="text-sm text-gray-500">Tinggi Badan</p>
+							<p class="font-semibold text-gray-800">{selectedAnak.tinggi_badan ?? '-'}</p>
+						</div>
+						<div class="rounded bg-gray-50 p-2">
+							<p class="text-sm text-gray-500">Berat Badan</p>
+							<p class="font-semibold text-gray-800">{selectedAnak.berat_badan ?? '-'}</p>
+						</div>
+						<div class="rounded bg-gray-50 p-2">
+							<p class="text-sm text-gray-500">Lingkar Kepala</p>
+							<p class="font-semibold text-gray-800">{selectedAnak.lingkar_kepala ?? '-'}</p>
+						</div>
+						<div class="rounded bg-gray-50 p-2">
+							<p class="text-sm text-gray-500">Lingkar Lengan</p>
+							<p class="font-semibold text-gray-800">{selectedAnak.lingkar_lengan ?? '-'}</p>
+						</div>
+					</div>
+
+					<!-- Hasil Analisis Status Gizi -->
+					<div class="mb-4">
+						<h3 class="text-md mb-2 text-left font-semibold">Hasil Analisis Status Gizi</h3>
+						<div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+							<div class="rounded bg-green-50 p-2">
+								<p class="text-sm text-gray-500">BB/U</p>
+								<p class="font-semibold text-gray-800">
+									{selectedAnak.hasil?.['BB/U']?.kategori ?? '-'}
+								</p>
+							</div>
+							<div class="rounded bg-green-50 p-2">
+								<p class="text-sm text-gray-500">IMT/U</p>
+								<p class="font-semibold text-gray-800">
+									{selectedAnak.hasil?.['IMT/U']?.kategori ?? '-'}
+								</p>
+							</div>
+							<div class="rounded bg-green-50 p-2">
+								<p class="text-sm text-gray-500">LILA/U</p>
+								<p class="font-semibold text-gray-800">
+									{selectedAnak.hasil?.['LILA/U']?.kategori ?? '-'}
+								</p>
+							</div>
+							<div class="rounded bg-green-50 p-2">
+								<p class="text-sm text-gray-500">LK/U</p>
+								<p class="font-semibold text-gray-800">
+									{selectedAnak.hasil?.['LK/U']?.kategori ?? '-'}
+								</p>
+							</div>
+							<div class="rounded bg-green-50 p-2">
+								<p class="text-sm text-gray-500">TB/U</p>
+								<p class="font-semibold text-gray-800">
+									{selectedAnak.hasil?.['TB/U']?.kategori ?? '-'}
+								</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Tombol Lihat Detail -->
 					<button
 						on:click={() => lihatDetail(selectedAnak)}
 						class="rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white shadow-md transition hover:bg-blue-700"
@@ -163,19 +224,21 @@
 						Lihat Detail
 					</button>
 				{:else}
-					<p>Silakan pilih anak untuk melihat grafik</p>
+					<p>Silakan pilih anak untuk melihat data pengukuran dan status gizi</p>
 				{/if}
 			</div>
 
 			<!-- CARD ANAK -->
-			<div class="flex flex-1 grow flex-col flex-nowrap gap-4 overflow-x-hidden overflow-y-auto scroll-smooth pt-1 pb-6 [-ms-overflow-style:none] [scrollbar-width:none]">
+			<div
+				class="flex flex-1 grow flex-col flex-nowrap gap-4 overflow-y-auto overflow-x-hidden scroll-smooth pb-6 pt-1 [-ms-overflow-style:none] [scrollbar-width:none]"
+			>
 				{#each anakList as anak}
 					<div
-						class="bg-white card-B hidden cursor-pointer text-center sm:block"
+						class="card-B hidden cursor-pointer bg-white text-center sm:block"
 						on:click={() => tampilkanGrafik(anak)}
 					>
 						<button
-							class="btn-riwayat absolute top-3 right-3 rounded-full bg-sky-500 px-3 py-1 text-sm text-white hover:bg-sky-600"
+							class="btn-riwayat absolute right-3 top-3 rounded-full bg-sky-500 px-3 py-1 text-sm text-white hover:bg-sky-600"
 							on:click={(e) => riwayatAnak(anak, e)}
 						>
 							Riwayat
@@ -189,8 +252,9 @@
 		</div>
 	</div>
 
-	<!-- MOBILE GRAFIK -->
+	<!-- ================= MOBILE GRAFIK ================= -->
 	{#if selectedAnak}
+		<!-- Kartu ringkasan anak -->
 		<div
 			class="mb-2 block cursor-pointer rounded-xl bg-white p-4 shadow transition hover:bg-blue-50 sm:hidden"
 			on:click={() => tampilkanGrafik(selectedAnak)}
@@ -202,18 +266,81 @@
 			</p>
 		</div>
 
-		<div class="card-grafik block rounded-xl bg-white p-6 text-center shadow-md sm:hidden">
-			<p class="mb-4 text-lg font-semibold">Grafik {selectedAnak.nama}</p>
+		<!-- Kartu grafik + data pengukuran + status gizi -->
+		<div class="card-grafik block rounded-xl bg-white p-4 shadow-md sm:hidden">
+			<p class="mb-4 text-lg font-semibold">{selectedAnak.nama} - Pengukuran Terakhir</p>
+
+			<!-- Info Pengukuran -->
+			<div class="mb-4 grid grid-cols-2 gap-2">
+				<div class="rounded bg-gray-50 p-2">
+					<p class="text-sm text-gray-500">Tinggi Badan</p>
+					<p class="font-semibold text-gray-800">{selectedAnak.tinggi_badan ?? '-'}</p>
+				</div>
+				<div class="rounded bg-gray-50 p-2">
+					<p class="text-sm text-gray-500">Berat Badan</p>
+					<p class="font-semibold text-gray-800">{selectedAnak.berat_badan ?? '-'}</p>
+				</div>
+				<div class="rounded bg-gray-50 p-2">
+					<p class="text-sm text-gray-500">Lingkar Kepala</p>
+					<p class="font-semibold text-gray-800">{selectedAnak.lingkar_kepala ?? '-'}</p>
+				</div>
+				<div class="rounded bg-gray-50 p-2">
+					<p class="text-sm text-gray-500">Lingkar Lengan</p>
+					<p class="font-semibold text-gray-800">{selectedAnak.lingkar_lengan ?? '-'}</p>
+				</div>
+			</div>
+
+			<!-- Hasil Analisis Status Gizi -->
+			<div class="mb-4">
+				<h3 class="text-md mb-2 text-left font-semibold">Hasil Analisis Status Gizi</h3>
+				<div class="grid grid-cols-2 gap-2">
+					<div class="rounded bg-green-50 p-2">
+						<p class="text-sm text-gray-500">BB/U</p>
+						<p class="font-semibold text-gray-800">
+							{selectedAnak.hasil?.['BB/U']?.kategori ?? '-'}
+						</p>
+					</div>
+					<div class="rounded bg-green-50 p-2">
+						<p class="text-sm text-gray-500">IMT/U</p>
+						<p class="font-semibold text-gray-800">
+							{selectedAnak.hasil?.['IMT/U']?.kategori ?? '-'}
+						</p>
+					</div>
+					<div class="rounded bg-green-50 p-2">
+						<p class="text-sm text-gray-500">LILA/U</p>
+						<p class="font-semibold text-gray-800">
+							{selectedAnak.hasil?.['LILA/U']?.kategori ?? '-'}
+						</p>
+					</div>
+					<div class="rounded bg-green-50 p-2">
+						<p class="text-sm text-gray-500">LK/U</p>
+						<p class="font-semibold text-gray-800">
+							{selectedAnak.hasil?.['LK/U']?.kategori ?? '-'}
+						</p>
+					</div>
+					<div class="rounded bg-green-50 p-2">
+						<p class="text-sm text-gray-500">TB/U</p>
+						<p class="font-semibold text-gray-800">
+							{selectedAnak.hasil?.['TB/U']?.kategori ?? '-'}
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- Tombol Lihat Detail -->
 			<button
 				on:click={() => lihatDetail(selectedAnak)}
-				class="rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white shadow-md transition hover:bg-blue-700"
+				class="w-full rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white shadow-md transition hover:bg-blue-700"
 			>
 				Lihat Detail
 			</button>
 		</div>
+	{:else}
+		<p class="text-center text-gray-600 sm:hidden">
+			Silakan pilih anak untuk melihat data pengukuran dan status gizi
+		</p>
 	{/if}
 </div>
-
 
 <style>
 	.container-anak {
