@@ -205,7 +205,11 @@ def post_display():
 @iot_bp.route("/latest-json", methods=["GET"])
 def latest_json():
     global latest_data
-    return jsonify(latest_data if latest_data else {})
+    if not latest_data or latest_data != previous_data:
+        previous_data = latest_data  # Update previous data
+        return jsonify(latest_data)
+    return jsonify({})  # Return empty if no change
+
 
 
 # ==========================================================

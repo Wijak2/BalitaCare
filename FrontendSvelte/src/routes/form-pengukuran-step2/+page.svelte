@@ -255,7 +255,7 @@
 
 			<div class="mt-auto flex flex-col gap-3">
 				<button
-					class="btn-A w-full bg-green-500 text-white transition hover:bg-green-600"
+					class="btn-A w-full bg-green-500 text-white transition hover:bg-gren-600"
 					on:click={saveData}>Simpan Pengukuran</button
 				>
 
