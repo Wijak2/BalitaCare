@@ -15,42 +15,19 @@
 
   let idPerawat: string | null = null;
 
-  function decodeJWT(token: string) {
-    try {
-      return JSON.parse(atob(token.split(".")[1]));
-    } catch {
-      return null;
-    }
-  }
-
   onMount(async () => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      alert("Anda belum login!");
-      goto("/login");
-      return;
-    }
-
-    const payload = decodeJWT(token);
-    idPerawat = payload?.user_id || null;
-
-    if (!idPerawat) {
-      alert("ID perawat tidak ditemukan! Login ulang.");
-      goto("/login");
-      return;
-    }
-
+    // Ambil id_anak dari URL
     const params = new URLSearchParams(window.location.search);
     const idAnakUrl = params.get("id_anak");
 
-    const res = await fetch(`${BACKEND_URL}/api/anak`, {
-      headers: {
-        Authorization: "Bearer " + token
-      }
-    });
-
-    daftarAnak = await res.json();
+    // Ambil semua anak tanpa token
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/anak`);
+      daftarAnak = await res.json();
+    } catch (err) {
+      alert("Gagal memuat daftar anak");
+      return;
+    }
 
     if (idAnakUrl) {
       selectedAnak = String(idAnakUrl);
@@ -59,22 +36,16 @@
   });
 
   async function getPengukuranByAnak() {
-    const token = localStorage.getItem("token");
-    if (!selectedAnak || !token) return;
-
-    const res = await fetch(`${BACKEND_URL}/api/pengukuran-by-anak/${selectedAnak}`, {
-      headers: {
-        Authorization: "Bearer " + token
-      }
-    });
-
-    daftarPengukuran = await res.json();
+    if (!selectedAnak) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/pengukuran-by-anak/${selectedAnak}`);
+      daftarPengukuran = await res.json();
+    } catch (err) {
+      alert("Gagal memuat riwayat pengukuran");
+    }
   }
 
   async function mulaiPengukuran() {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     if (!selectedAnak || !tanggalPengukuran) {
       alert("Pilih anak dan tanggal terlebih dahulu!");
       return;
@@ -84,18 +55,19 @@
     formData.append("id_anak", selectedAnak);
     formData.append("tanggal_pengukuran", tanggalPengukuran);
 
-    const res = await fetch(`${BACKEND_URL}/api/create-pengukuran`, {
-      method: "POST",
-      headers: { Authorization: "Bearer " + token },
-      body: formData
-    });
-
-    const data = await res.json();
-    message = data.message;
-    selectedPengukuran = data.id_pengukuran;
-    isExisting = data.message.includes("sudah ada");
-
-    await getPengukuranByAnak();
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/create-pengukuran`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      message = data.message;
+      selectedPengukuran = data.id_pengukuran;
+      isExisting = data.message.includes("sudah ada");
+      await getPengukuranByAnak();
+    } catch (err) {
+      alert("Gagal membuat pengukuran baru");
+    }
   }
 
   function lanjutStep2() {
@@ -107,13 +79,10 @@
   }
 
   function kembaliDashboard() {
-    if (!idPerawat) {
-      alert("ID perawat tidak ditemukan!");
-      return;
-    }
     goto(`/dashboard-perawat`);
   }
 </script>
+
 
 <div class="page-wrapper flex items-center justify-center">
   <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-lg space-y-6 border border-blue-100">

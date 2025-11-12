@@ -4,7 +4,6 @@
   import { goto } from "$app/navigation";
   import { PUBLIC_BACKEND_URL } from "$env/static/public";
 
-  // Backend URL dari .env
   const BACKEND_URL = `${PUBLIC_BACKEND_URL}/iot`;
 
   const balitaList = writable<{ id: number; nama: string; tglLahir: string; status: string }[]>([]);
@@ -23,50 +22,20 @@
 
   let idOrangtua: number | null = null;
 
-  function decodeJWT(token: string) {
-    try {
-      return JSON.parse(atob(token.split(".")[1]));
-    } catch {
-      return null;
-    }
-  }
-
   onMount(async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("Anda belum login");
-      goto("/login");
-      return;
-    }
+    // Ambil id_orangtua dari URL atau sessionStorage
+    const params = new URLSearchParams(window.location.search);
+    const idParam = params.get("id");
+    idOrangtua = idParam ? Number(idParam) : Number(sessionStorage.getItem("selected_orangtua"));
 
-    const payload = decodeJWT(token);
-    if (!payload) {
-      alert("Token tidak valid");
-      goto("/login");
-      return;
-    }
-
-    if (payload.role === "orang_tua") {
-      idOrangtua = payload.user_id;
-    } else if (payload.role === "perawat") {
-      const stored = localStorage.getItem("selected_orangtua");
-      if (!stored) {
-        alert("Silakan pilih orang tua dari dashboard terlebih dahulu.");
-        goto("/dashboard-perawat");
-        return;
-      }
-      idOrangtua = Number(stored);
-    } else {
-      alert("Role tidak dikenali");
-      goto("/login");
+    if (!idOrangtua) {
+      alert("ID orang tua tidak ditemukan.");
+      goto("/dashboard-perawat");
       return;
     }
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/anak-by-orangtua/${idOrangtua}`, {
-        headers: { Authorization: "Bearer " + token }
-      });
-
+      const res = await fetch(`${BACKEND_URL}/api/anak-by-orangtua/${idOrangtua}`);
       const data = await res.json();
 
       balitaList.set(
@@ -106,12 +75,9 @@
 
   async function hapusAnak() {
     if (!anakToDelete) return;
-
-    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${BACKEND_URL}/anak/delete/${anakToDelete}`, {
-        method: "POST",
-        headers: { Authorization: "Bearer " + token }
+        method: "POST"
       });
 
       if (res.ok) {
@@ -128,6 +94,7 @@
     }
   }
 </script>
+
 
 <div class="page-wrapper relative">
   {#if $notification.message}

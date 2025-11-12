@@ -24,36 +24,121 @@
     )
   );
 
-  function decodeJWT(token: string) {
+  // ---------- Utility: ambil token (sessionStorage -> localStorage) ----------
+  function readStoredToken(): string | null {
+    let token = sessionStorage.getItem("token");
+    if (token) {
+      console.log("[auth] token found in sessionStorage");
+      return token;
+    }
+    token = localStorage.getItem("token");
+    if (token) {
+      console.log("[auth] token found in localStorage (fallback)");
+      return token;
+    }
+    console.log("[auth] token not found in storage");
+    return null;
+  }
+
+  // ---------- Base64URL-safe JWT decode (meng-handle "Bearer " juga) ----------
+  function decodeJWT(rawToken: string | null) {
+    if (!rawToken) return null;
     try {
-      return JSON.parse(atob(token.split(".")[1]));
-    } catch {
+      // strip "Bearer " jika tidak sengaja disimpan demikian
+      const token = rawToken.startsWith("Bearer ") ? rawToken.slice(7) : rawToken;
+      const parts = token.split(".");
+      if (parts.length !== 3) {
+        console.warn("[auth] token tidak berbentuk JWT 3 bagian:", token);
+        return null;
+      }
+      const base64Url = parts[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+      // atob pada Base64URL safe setelah replace
+      const jsonPayload = decodeURIComponent(
+        atob(padded)
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join("")
+      );
+      const payload = JSON.parse(jsonPayload);
+      return payload;
+    } catch (e) {
+      console.error("[auth] gagal decode JWT:", e);
       return null;
     }
   }
 
-  onMount(async () => {
-    const token = sessionStorage.getItem("token");
+  function isTokenExpired(payload: any) {
+    if (!payload || typeof payload.exp !== "number") return false; // tidak tahu, anggap tidak
+    // exp pada JWT biasanya dalam detik unix
+    const nowSec = Math.floor(Date.now() / 1000);
+    return payload.exp <= nowSec;
+  }
 
-    if (!token) {
-      alert("Anda belum login");
+  // ---------- onMount: validasi token + ambil data ----------
+  onMount(async () => {
+    console.log("[auth] onMount dashboard-perawat");
+    const rawToken = readStoredToken();
+
+    if (!rawToken) {
+      alert("Anda belum login (token tidak ditemukan).");
       goto("/login");
       return;
     }
 
-    const payload = decodeJWT(token);
+    console.log("[auth] rawToken preview (trimmed):", rawToken.slice(0, 30) + "...");
+    const payload = decodeJWT(rawToken);
+    console.log("[auth] decoded payload:", payload);
 
-    if (!payload || payload.role !== "perawat") {
+    if (!payload) {
+      alert("Token tidak bisa didecode. Silakan login ulang.");
+      // opsional: hapus storage lalu redirect
+      sessionStorage.removeItem("token");
+      localStorage.removeItem("token");
+      goto("/login");
+      return;
+    }
+
+    // cek expired
+    if (isTokenExpired(payload)) {
+      console.warn("[auth] token expired:", payload.exp);
+      alert("Sesi anda telah kedaluwarsa. Silakan login ulang.");
+      sessionStorage.removeItem("token");
+      localStorage.removeItem("token");
+      goto("/login");
+      return;
+    }
+
+    // cek role (case-insensitive)
+    const role = typeof payload.role === "string" ? payload.role.toLowerCase() : "";
+    if (role !== "perawat") {
+      console.warn("[auth] role tidak cocok:", payload.role);
       alert("Akses ditolak. Anda bukan perawat.");
       goto("/login");
       return;
     }
 
+    // token valid — ambil data
     try {
-      const resStats = await fetch(`${BACKEND_URL}/api/dashboard-stats`, {
-        headers: { Authorization: "Bearer " + token }
-      });
+      const headers = { Authorization: `Bearer ${rawToken}` };
+
+      console.log("[fetch] GET /api/dashboard-stats");
+      const resStats = await fetch(`${BACKEND_URL}/api/dashboard-stats`, { headers });
+      if (resStats.status === 401 || resStats.status === 403) {
+        console.warn("[fetch] /dashboard-stats returned", resStats.status);
+        alert("Token tidak valid untuk permintaan ini. Silakan login ulang.");
+        sessionStorage.removeItem("token");
+        localStorage.removeItem("token");
+        goto("/login");
+        return;
+      }
+      if (!resStats.ok) {
+        const txt = await resStats.text();
+        throw new Error(`/api/dashboard-stats error ${resStats.status}: ${txt}`);
+      }
       const dataStats = await resStats.json();
+      console.log("[fetch] dataStats:", dataStats);
 
       statsPerawat = [
         { title: "Jumlah Orang Tua Terdaftar", value: dataStats.orangtua },
@@ -61,19 +146,33 @@
         { title: "Jumlah Perawat Terdaftar", value: dataStats.perawat }
       ];
 
-      const resOrtu = await fetch(`${BACKEND_URL}/api/orangtua`, {
-        headers: { Authorization: "Bearer " + token }
-      });
+      console.log("[fetch] GET /api/orangtua");
+      const resOrtu = await fetch(`${BACKEND_URL}/api/orangtua`, { headers });
+      if (resOrtu.status === 401 || resOrtu.status === 403) {
+        console.warn("[fetch] /orangtua returned", resOrtu.status);
+        alert("Token tidak valid untuk permintaan daftar orang tua. Silakan login ulang.");
+        sessionStorage.removeItem("token");
+        localStorage.removeItem("token");
+        goto("/login");
+        return;
+      }
+      if (!resOrtu.ok) {
+        const txt = await resOrtu.text();
+        throw new Error(`/api/orangtua error ${resOrtu.status}: ${txt}`);
+      }
       const dataOrtu = await resOrtu.json();
+      console.log("[fetch] dataOrtu length:", Array.isArray(dataOrtu) ? dataOrtu.length : typeof dataOrtu);
       orangtuaList.set(dataOrtu);
-
     } catch (err) {
-      console.error("Gagal mengambil data dashboard:", err);
+      console.error("[error] Gagal mengambil data dashboard:", err);
+      alert("Terjadi kesalahan saat memuat data dashboard. Cek console untuk detail.");
     }
   });
 
+  // ---------- navigasi ----------
   function goListBalita(id_orang_tua: number) {
     sessionStorage.setItem("selected_orangtua", String(id_orang_tua));
+    // tetap navigasi di tab yang sama — jika ingin tab baru gunakan window.open
     goto("/list-balita");
   }
 
@@ -121,19 +220,8 @@
               <td>{o.telp}</td>
               <td>{o.email}</td>
               <td class="space-x-2">
-                <button
-                  on:click={() => goListBalita(o.id_orang_tua)}
-                  class="btn-B bg-blue-500 text-white"
-                >
-                  Daftar anak
-                </button>
-
-                <button
-                  on:click={() => goTambahAnak(o.id_orang_tua)}
-                  class="btn-B bg-green-500 text-white sm:px-3 sm:text-sm"
-                >
-                  Tambah anak
-                </button>
+                <button on:click={() => goListBalita(o.id_orang_tua)} class="btn-B bg-blue-500 text-white">Daftar anak</button>
+                <button on:click={() => goTambahAnak(o.id_orang_tua)} class="btn-B bg-green-500 text-white sm:px-3 sm:text-sm">Tambah anak</button>
               </td>
             </tr>
           {/each}
