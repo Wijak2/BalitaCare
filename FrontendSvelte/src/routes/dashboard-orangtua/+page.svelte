@@ -5,7 +5,7 @@
 
 	let anakList: any[] = [];
 	let id_orang_tua: string | null = null;
-	let isLoading = true;
+	let isLoadingPengukuran = true; // spinner hanya di card-A
 	let selectedAnak: any = null;
 
 	function decodeJWT(token: string) {
@@ -32,45 +32,70 @@
 		return token;
 	}
 
-	onMount(async () => {
-		const token = cekToken();
-		if (!token) return;
-
-		id_orang_tua = decodeJWT(token).user_id;
-
+	// 🔹 Ambil semua anak
+	async function ambilDataAnak(token: string) {
 		try {
 			const res = await fetch(`${PUBLIC_BACKEND_URL}/iot/api/anak-by-orangtua/${id_orang_tua}`, {
 				headers: { Authorization: 'Bearer ' + token }
 			});
-
 			const data = await res.json();
-			anakList = data;
-
-			if (anakList.length > 0) {
-				anakList.sort((a, b) => a.id_anak - b.id_anak);
-				selectedAnak = anakList[0];
-			}
-		} catch (err) {
-			console.error('Gagal memuat data anak:', err);
-		} finally {
-			isLoading = false;
+			return data.sort((a, b) => a.id_anak - b.id_anak);
+		} catch (e) {
+			console.error('Gagal memuat data anak:', e);
+			return [];
 		}
+	}
+
+	// 🔹 Ambil pengukuran tiap anak
+	async function preloadPengukuran(anakList: any[], token: string) {
+		for (const anak of anakList) {
+			try {
+				const res = await fetch(`${PUBLIC_BACKEND_URL}/iot/api/pengukuran/detail/${anak.id_anak}`, {
+					headers: { Authorization: 'Bearer ' + token }
+				});
+				if (!res.ok) continue;
+				const d = await res.json();
+				anak.tinggi_badan = d?.peng?.tinggi_badan ?? '-';
+				anak.berat_badan = d?.peng?.berat_badan ?? '-';
+				anak.lingkar_kepala = d?.peng?.lingkar_kepala ?? '-';
+				anak.lingkar_lengan = d?.peng?.lingkar_lengan ?? '-';
+				anak.hasil = d?.hasil ?? {};
+				anak.status = d?.hasil?.['BB/U']?.kategori ?? 'Normal';
+			} catch (e) {
+				console.error(`Gagal memuat pengukuran anak ${anak.nama}:`, e);
+			}
+		}
+	}
+
+	onMount(async () => {
+		const token = cekToken();
+		if (!token) return;
+		id_orang_tua = decodeJWT(token).user_id;
+
+		isLoadingPengukuran = true;
+		anakList = await ambilDataAnak(token);
+
+		if (anakList.length > 0) {
+			await preloadPengukuran(anakList, token);
+			selectedAnak = anakList[0];
+		}
+		isLoadingPengukuran = false;
 	});
 
 	function hitungUsia(tanggal_lahir: string) {
 		if (!tanggal_lahir) return '-';
-		const tglLahir = new Date(tanggal_lahir);
-		const sekarang = new Date();
-		let tahun = sekarang.getFullYear() - tglLahir.getFullYear();
-		let bulan = sekarang.getMonth() - tglLahir.getMonth();
-		if (bulan < 0) {
-			tahun--;
-			bulan += 12;
+		const tgl = new Date(tanggal_lahir);
+		const now = new Date();
+		let th = now.getFullYear() - tgl.getFullYear();
+		let bln = now.getMonth() - tgl.getMonth();
+		if (bln < 0) {
+			th--;
+			bln += 12;
 		}
-		return `${tahun} th ${bulan} bln`;
+		return `${th} th ${bln} bln`;
 	}
 
-	// ================= NAVIGASI DENGAN JWT =================
+	// 🔹 Navigasi
 	function navigasiKe(url: string) {
 		const token = cekToken();
 		if (!token) return;
@@ -115,7 +140,7 @@
 		</button>
 	</div>
 
-	<!-- MOBILE DROPDOWN -->
+	<!-- 🔹 MOBILE DROPDOWN -->
 	<script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
 	<el-dropdown class="mb-2 block inline-block w-full sm:hidden">
 		<button
@@ -151,15 +176,20 @@
 		</el-menu>
 	</el-dropdown>
 
-	<!-- DESKTOP & MOBILE CARDS -->
+	<!-- 🔹 DESKTOP -->
 	<div class="hidden sm:block">
 		<div class="flex h-[60vh] gap-4">
-			<!-- GRAFIK + DATA PENGUKURAN TERAKHIR + STATUS GIZI -->
-			<div class="card-A flex-3 bg-white p-4 text-center">
+			<!-- CARD-A -->
+			<div class="card-A flex-3 bg-white p-4 text-center relative">
+				{#if isLoadingPengukuran}
+					<div class="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
+						<div class="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+					</div>
+				{/if}
+
 				{#if selectedAnak}
 					<p class="mb-4 text-lg font-semibold">{selectedAnak.nama} - Pengukuran Terakhir</p>
 
-					<!-- Info Pengukuran -->
 					<div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
 						<div class="rounded bg-gray-50 p-2">
 							<p class="text-sm text-gray-500">Tinggi Badan</p>
@@ -179,44 +209,18 @@
 						</div>
 					</div>
 
-					<!-- Hasil Analisis Status Gizi -->
 					<div class="mb-4">
 						<h3 class="text-md mb-2 text-left font-semibold">Hasil Analisis Status Gizi</h3>
 						<div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-							<div class="rounded bg-green-50 p-2">
-								<p class="text-sm text-gray-500">BB/U</p>
-								<p class="font-semibold text-gray-800">
-									{selectedAnak.hasil?.['BB/U']?.kategori ?? '-'}
-								</p>
-							</div>
-							<div class="rounded bg-green-50 p-2">
-								<p class="text-sm text-gray-500">IMT/U</p>
-								<p class="font-semibold text-gray-800">
-									{selectedAnak.hasil?.['IMT/U']?.kategori ?? '-'}
-								</p>
-							</div>
-							<div class="rounded bg-green-50 p-2">
-								<p class="text-sm text-gray-500">LILA/U</p>
-								<p class="font-semibold text-gray-800">
-									{selectedAnak.hasil?.['LILA/U']?.kategori ?? '-'}
-								</p>
-							</div>
-							<div class="rounded bg-green-50 p-2">
-								<p class="text-sm text-gray-500">LK/U</p>
-								<p class="font-semibold text-gray-800">
-									{selectedAnak.hasil?.['LK/U']?.kategori ?? '-'}
-								</p>
-							</div>
-							<div class="rounded bg-green-50 p-2">
-								<p class="text-sm text-gray-500">TB/U</p>
-								<p class="font-semibold text-gray-800">
-									{selectedAnak.hasil?.['TB/U']?.kategori ?? '-'}
-								</p>
-							</div>
+							{#each ['BB/U','IMT/U','LILA/U','LK/U','TB/U'] as key}
+								<div class="rounded bg-green-50 p-2">
+									<p class="text-sm text-gray-500">{key}</p>
+									<p class="font-semibold text-gray-800">{selectedAnak.hasil?.[key]?.kategori ?? '-'}</p>
+								</div>
+							{/each}
 						</div>
 					</div>
 
-					<!-- Tombol Lihat Detail -->
 					<button
 						on:click={() => lihatDetail(selectedAnak)}
 						class="rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white shadow-md transition hover:bg-blue-700"
@@ -228,13 +232,11 @@
 				{/if}
 			</div>
 
-			<!-- CARD ANAK -->
-			<div
-				class="flex flex-1 grow flex-col flex-nowrap gap-4 overflow-y-auto overflow-x-hidden scroll-smooth pb-6 pt-1 [-ms-overflow-style:none] [scrollbar-width:none]"
-			>
+			<!-- CARD-B -->
+			<div class="flex flex-1 grow flex-col flex-nowrap gap-4 overflow-y-auto scroll-smooth pb-6 pt-1">
 				{#each anakList as anak}
 					<div
-						class="card-B hidden cursor-pointer bg-white text-center sm:block"
+						class="card-B relative cursor-pointer bg-white text-center"
 						on:click={() => tampilkanGrafik(anak)}
 					>
 						<button
@@ -252,9 +254,8 @@
 		</div>
 	</div>
 
-	<!-- ================= MOBILE GRAFIK ================= -->
+	<!-- 🔹 MOBILE VIEW -->
 	{#if selectedAnak}
-		<!-- Kartu ringkasan anak -->
 		<div
 			class="mb-2 block cursor-pointer rounded-xl bg-white p-4 shadow transition hover:bg-blue-50 sm:hidden"
 			on:click={() => tampilkanGrafik(selectedAnak)}
@@ -266,68 +267,41 @@
 			</p>
 		</div>
 
-		<!-- Kartu grafik + data pengukuran + status gizi -->
-		<div class="card-grafik block rounded-xl bg-white p-4 shadow-md sm:hidden">
+		<div class="card-grafik block rounded-xl bg-white p-4 shadow-md sm:hidden relative">
+			{#if isLoadingPengukuran}
+				<div class="absolute inset-0 flex items-center justify-center bg-white/70 z-10">
+					<div class="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+				</div>
+			{/if}
+
 			<p class="mb-4 text-lg font-semibold">{selectedAnak.nama} - Pengukuran Terakhir</p>
 
-			<!-- Info Pengukuran -->
 			<div class="mb-4 grid grid-cols-2 gap-2">
-				<div class="rounded bg-gray-50 p-2">
-					<p class="text-sm text-gray-500">Tinggi Badan</p>
-					<p class="font-semibold text-gray-800">{selectedAnak.tinggi_badan ?? '-'}</p>
-				</div>
-				<div class="rounded bg-gray-50 p-2">
-					<p class="text-sm text-gray-500">Berat Badan</p>
-					<p class="font-semibold text-gray-800">{selectedAnak.berat_badan ?? '-'}</p>
-				</div>
-				<div class="rounded bg-gray-50 p-2">
-					<p class="text-sm text-gray-500">Lingkar Kepala</p>
-					<p class="font-semibold text-gray-800">{selectedAnak.lingkar_kepala ?? '-'}</p>
-				</div>
-				<div class="rounded bg-gray-50 p-2">
-					<p class="text-sm text-gray-500">Lingkar Lengan</p>
-					<p class="font-semibold text-gray-800">{selectedAnak.lingkar_lengan ?? '-'}</p>
-				</div>
+				{#each [
+					['Tinggi Badan', selectedAnak.tinggi_badan],
+					['Berat Badan', selectedAnak.berat_badan],
+					['Lingkar Kepala', selectedAnak.lingkar_kepala],
+					['Lingkar Lengan', selectedAnak.lingkar_lengan]
+				] as [label, val]}
+					<div class="rounded bg-gray-50 p-2">
+						<p class="text-sm text-gray-500">{label}</p>
+						<p class="font-semibold text-gray-800">{val ?? '-'}</p>
+					</div>
+				{/each}
 			</div>
 
-			<!-- Hasil Analisis Status Gizi -->
 			<div class="mb-4">
 				<h3 class="text-md mb-2 text-left font-semibold">Hasil Analisis Status Gizi</h3>
 				<div class="grid grid-cols-2 gap-2">
-					<div class="rounded bg-green-50 p-2">
-						<p class="text-sm text-gray-500">BB/U</p>
-						<p class="font-semibold text-gray-800">
-							{selectedAnak.hasil?.['BB/U']?.kategori ?? '-'}
-						</p>
-					</div>
-					<div class="rounded bg-green-50 p-2">
-						<p class="text-sm text-gray-500">IMT/U</p>
-						<p class="font-semibold text-gray-800">
-							{selectedAnak.hasil?.['IMT/U']?.kategori ?? '-'}
-						</p>
-					</div>
-					<div class="rounded bg-green-50 p-2">
-						<p class="text-sm text-gray-500">LILA/U</p>
-						<p class="font-semibold text-gray-800">
-							{selectedAnak.hasil?.['LILA/U']?.kategori ?? '-'}
-						</p>
-					</div>
-					<div class="rounded bg-green-50 p-2">
-						<p class="text-sm text-gray-500">LK/U</p>
-						<p class="font-semibold text-gray-800">
-							{selectedAnak.hasil?.['LK/U']?.kategori ?? '-'}
-						</p>
-					</div>
-					<div class="rounded bg-green-50 p-2">
-						<p class="text-sm text-gray-500">TB/U</p>
-						<p class="font-semibold text-gray-800">
-							{selectedAnak.hasil?.['TB/U']?.kategori ?? '-'}
-						</p>
-					</div>
+					{#each ['BB/U','IMT/U','LILA/U','LK/U','TB/U'] as key}
+						<div class="rounded bg-green-50 p-2">
+							<p class="text-sm text-gray-500">{key}</p>
+							<p class="font-semibold text-gray-800">{selectedAnak.hasil?.[key]?.kategori ?? '-'}</p>
+						</div>
+					{/each}
 				</div>
 			</div>
 
-			<!-- Tombol Lihat Detail -->
 			<button
 				on:click={() => lihatDetail(selectedAnak)}
 				class="w-full rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white shadow-md transition hover:bg-blue-700"
@@ -341,11 +315,3 @@
 		</p>
 	{/if}
 </div>
-
-<style>
-	.container-anak {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 1rem;
-	}
-</style>
