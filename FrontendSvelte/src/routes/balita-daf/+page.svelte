@@ -156,7 +156,7 @@
             Kelola data balita dan lakukan pengukuran pertumbuhan
           </CardDescription>
         </div>
-        <Button onclick={() => goto(`/crud-anak?id_orangtua=${idOrangtua}`)} class="w-full sm:w-auto">
+        <Button onclick={() => goto(`/anak-kel?id_orangtua=${idOrangtua}`)} class="w-full sm:w-auto">
           <Plus class="mr-2 h-4 w-4" />
           Tambah Balita
         </Button>

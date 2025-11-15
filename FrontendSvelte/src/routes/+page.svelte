@@ -5,7 +5,7 @@
     import { Baby, Ruler, Activity, Weight, TrendingUp } from 'lucide-svelte';
 
     function keLogin() {
-        goto('/login');
+        goto('/sign-in');
     }
 
     function keDaftar() {
@@ -56,10 +56,10 @@
 
             <!-- Tombol Aksi -->
             <div class="flex flex-col sm:flex-row gap-4 justify-center mt-6">
-                <Button size="lg" class="text-lg px-8 py-3" on:click={keLogin}>
+                <Button size="lg" class="text-lg px-8 py-3" onclick={keLogin}>
                     Masuk
                 </Button>
-                <Button size="lg" variant="outline" class="text-lg px-8 py-3" on:click={keDaftar}>
+                <Button size="lg" variant="outline" class="text-lg px-8 py-3" onclick={keDaftar}>
                     Daftar
                 </Button>
             </div>

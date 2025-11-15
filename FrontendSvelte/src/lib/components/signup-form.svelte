@@ -49,7 +49,7 @@
 			success = true;
 
 			setTimeout(() => {
-				window.location.href = "/login";
+				window.location.href = "/sign-in";
 			}, 1500);
 		} catch (err) {
 			console.error("Register error:", err);
@@ -102,7 +102,7 @@
 							<p class="text-center text-sm mt-2 {success ? 'text-green-600' : 'text-red-500'}">{message}</p>
 						{/if}
 						<Field.Description class="text-center mt-2">
-							Sudah punya akun? <a href="/login-04" class="text-blue-600 underline">Masuk</a>
+							Sudah punya akun? <a href="/sign-in" class="text-blue-600 underline">Masuk</a>
 						</Field.Description>
 					</Field.Field>
 				</Field.Group>

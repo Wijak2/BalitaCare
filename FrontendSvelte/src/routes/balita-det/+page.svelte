@@ -501,7 +501,7 @@
 					</CardContent>
 				</Card>
 
-				<!-- Analysis Results - Updated to match the reference design -->
+<!-- Analysis Results - Updated to match the reference design -->
 				<Card>
 					<CardHeader>
 						<CardTitle className="flex items-center">
@@ -525,30 +525,55 @@
 									<p class="text-sm font-semibold text-gray-900">
 										{hasil['BB/U']?.kategori ?? '-'}
 									</p>
+									{#if hasil['BB/U']?.z_score !== undefined && hasil['BB/U']?.z_score !== null}
+										<p class="mt-1 text-xs text-gray-500">
+											Z-score: {typeof hasil['BB/U'].z_score === 'number' ? hasil['BB/U'].z_score.toFixed(2) : hasil['BB/U'].z_score}
+										</p>
+									{/if}
 								</div>
 								<div class="rounded-lg border border-green-200 bg-green-50 p-4">
 									<p class="mb-1 text-xs font-medium text-gray-600">IMT/U</p>
 									<p class="text-sm font-semibold text-gray-900">
 										{hasil['IMT/U']?.kategori ?? '-'}
 									</p>
+									{#if hasil['IMT/U']?.z_score !== undefined && hasil['IMT/U']?.z_score !== null}
+										<p class="mt-1 text-xs text-gray-500">
+											Z-score: {typeof hasil['IMT/U'].z_score === 'number' ? hasil['IMT/U'].z_score.toFixed(2) : hasil['IMT/U'].z_score}
+										</p>
+									{/if}
 								</div>
 								<div class="rounded-lg border border-green-200 bg-green-50 p-4">
 									<p class="mb-1 text-xs font-medium text-gray-600">LILA/U</p>
 									<p class="text-sm font-semibold text-gray-900">
 										{hasil['LILA/U']?.kategori ?? '-'}
 									</p>
+									{#if hasil['LILA/U']?.z_score !== undefined && hasil['LILA/U']?.z_score !== null}
+										<p class="mt-1 text-xs text-gray-500">
+											Z-score: {typeof hasil['LILA/U'].z_score === 'number' ? hasil['LILA/U'].z_score.toFixed(2) : hasil['LILA/U'].z_score}
+										</p>
+									{/if}
 								</div>
 								<div class="rounded-lg border border-green-200 bg-green-50 p-4">
 									<p class="mb-1 text-xs font-medium text-gray-600">LK/U</p>
 									<p class="text-sm font-semibold text-gray-900">
 										{hasil['LK/U']?.kategori ?? '-'}
 									</p>
+									{#if hasil['LK/U']?.z_score !== undefined && hasil['LK/U']?.z_score !== null}
+										<p class="mt-1 text-xs text-gray-500">
+											Z-score: {typeof hasil['LK/U'].z_score === 'number' ? hasil['LK/U'].z_score.toFixed(2) : hasil['LK/U'].z_score}
+										</p>
+									{/if}
 								</div>
 								<div class="rounded-lg border border-green-200 bg-green-50 p-4">
 									<p class="mb-1 text-xs font-medium text-gray-600">TB/U</p>
 									<p class="text-sm font-semibold text-gray-900">
 										{hasil['TB/U']?.kategori ?? '-'}
 									</p>
+									{#if hasil['TB/U']?.z_score !== undefined && hasil['TB/U']?.z_score !== null}
+										<p class="mt-1 text-xs text-gray-500">
+											Z-score: {typeof hasil['TB/U'].z_score === 'number' ? hasil['TB/U'].z_score.toFixed(2) : hasil['TB/U'].z_score}
+										</p>
+									{/if}
 								</div>
 							</div>
 						{/if}

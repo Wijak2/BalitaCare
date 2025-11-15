@@ -108,11 +108,11 @@
     });
 
     function tambahAnak() {
-        goto(`/kel-anak?id_orangtua=${idOrangtua}`);
+        goto(`/anak-kel?id_orangtua=${idOrangtua}`);
     }
 
     function editAnak(id: number) {
-        goto(`/kel-anak?id_anak=${id}&id_orangtua=${idOrangtua}`);
+        goto(`/anak-kel?id_anak=${id}&id_orangtua=${idOrangtua}`);
     }
 
     function kembali() {
